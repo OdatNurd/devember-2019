@@ -1,0 +1,6 @@
+%YAML 1.2
+---
+hidden: true
+scope: text.plain.sudoku
+contexts:
+  main: []

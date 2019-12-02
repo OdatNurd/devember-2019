@@ -1,0 +1,11 @@
+{
+    // Inaide of a Sudoku view, we want to focus on just the game, so anything
+    // that might mess up the display or distract is turned off.
+    "gutter": false,
+    "rulers": [],
+    "word_wrap": false,
+    "highlight_line": false,
+
+    // Everything centers on the game board
+    "draw_centered": true
+}

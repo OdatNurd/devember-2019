@@ -1,0 +1,7 @@
+[
+    { "keys": ["super+t"], "command": "noop", "context": [{ "key": "sudoku"}]},
+    { "keys": ["super+p"], "command": "noop", "context": [{ "key": "sudoku"} ]},
+    { "keys": ["super+shift+p"], "command": "noop", "context": [{ "key": "sudoku"} ]},
+    { "keys": ["super+r"], "command": "noop", "context": [{ "key": "sudoku"} ]},
+    { "keys": ["ctrl+g"], "command": "noop", "context": [{ "key": "sudoku"}, ]},
+]
