@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"name": "Sudoku",
+			"path": "./Sudoku"
+		},
+		{
+			"name": "Wiki",
+			"path": "../devember-2019.wiki"
+		}
+	]
+}
