@@ -19,9 +19,14 @@ def _is_sudoku(obj):
     to the active view in that window.
     """
     if isinstance(obj, sublime.Window):
+        # Not sure why at the moment, but it's possible for a window to not
+        # have an active view, so guard against that.
+        if obj.active_view() is None:
+            return False
         obj = obj.active_view().settings()
     elif isinstance(obj, sublime.View):
         obj = obj.settings()
+
     return obj.get("syntax", "") == _sudoku_syntax("Sudoku")
 
 
