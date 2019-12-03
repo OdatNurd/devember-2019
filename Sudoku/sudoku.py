@@ -88,7 +88,7 @@ class SudokuGameListener(sublime_plugin.EventListener):
     """
     def on_window_command(self, window, command, args):
         if _is_sudoku(window):
-            if command in ("new_file"):
+            if command in ("new_file", "show_panel"):
                 return ('noop')
 
 
