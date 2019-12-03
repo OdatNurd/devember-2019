@@ -27,7 +27,8 @@ def _is_sudoku(obj):
     elif isinstance(obj, sublime.View):
         obj = obj.settings()
 
-    return obj.get("syntax", "") == _sudoku_syntax("Sudoku")
+    return (not obj.get("_debug", False) and
+                obj.get("syntax", "") == _sudoku_syntax("Sudoku"))
 
 
 ###----------------------------------------------------------------------------
