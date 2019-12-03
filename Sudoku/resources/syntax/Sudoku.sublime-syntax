@@ -3,4 +3,20 @@
 hidden: true
 scope: text.plain.sudoku
 contexts:
-  main: []
+  main: 
+    # The corner of a cell; sadly this also matches the bottom left of the
+    # grid squares at the end of every three rows.
+    - match: '\+-'
+      scope: meta.cell.corner
+
+    # Standard grid separator
+    - match: '([+|]|-+)'
+      scope: meta.cell.separator
+
+    # A sequence of two or more of the same digit is an answer
+    - match: '(\d)\1{1,}'
+      scope: meta.answer entity.name
+
+    # Any single digit is a hint
+    - match: '\d'
+      scope: meta.hint comment
