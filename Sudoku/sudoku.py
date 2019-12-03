@@ -5,6 +5,14 @@ import sublime_plugin
 ###----------------------------------------------------------------------------
 
 
+# String constants for generating our grid of squares for the game board.
+_grid_h = '+----+----+----+'
+_grid_v = '|    |    |    |'
+
+
+###----------------------------------------------------------------------------
+
+
 def _sudoku_syntax(file):
     """
     Return the full name of the given sudoku syntax based on the base name.
@@ -31,6 +39,19 @@ def _is_sudoku(obj):
                 obj.get("syntax", "") == _sudoku_syntax("Sudoku"))
 
 
+def _make_grid(view):
+    """
+    Generate a game grid into the view provided, starting at the current cursor
+    location in the view.
+    """
+    h = " ".join([_grid_h] * 3) + "\n"
+    v = " ".join([_grid_v] * 3) + "\n"
+    r = ((h + (v * 3)) * 3) + h
+    g = ((r + "\n") * 3) + "\n"
+
+    view.run_command("append", {"characters": g})
+
+
 ###----------------------------------------------------------------------------
 
 
@@ -53,6 +74,11 @@ class SudokuNewGame(sublime_plugin.ApplicationCommand):
         view = window.new_file(syntax=_sudoku_syntax("Sudoku"))
         view.set_name("Sublime Sudoku")
         view.set_scratch(True)
+
+        _make_grid(view)
+
+        # Finalize it now; from this point forward we need to adjust the read
+        # only state in order to modify the view.
         view.set_read_only(True)
         view.sel().clear()
 
