@@ -56,7 +56,7 @@ def _is_sudoku(obj):
                 obj.get("syntax", "") == _sudoku_syntax("Sudoku"))
 
 
-def _make_grid(view):
+def _make_grid():
     """
     Generate a game grid into the view provided, starting at the current cursor
     location in the view.
@@ -69,7 +69,7 @@ def _make_grid(view):
     r = (t + (v * 3) + h) + ((v * 3) + h) + ((v * 3) + b)
     g = ((r + "\n") * 3) + "\n"
 
-    view.run_command("append", {"characters": g})
+    return g
 
 
 def _cell(view, region):
@@ -104,7 +104,7 @@ class SudokuNewGameCommand(sublime_plugin.ApplicationCommand):
         view.set_name("Sublime Sudoku")
         view.set_scratch(True)
 
-        _make_grid(view)
+        view.run_command("sudoku_render", {"action": "grid"})
         view.run_command("sudoku_render", {"action": "puzzle"})
 
         # Finalize it now; from this point forward we need to adjust the read
@@ -132,7 +132,12 @@ class SudokuRenderCommand(sublime_plugin.TextCommand):
 
     def _setup_regions(self):
         if not hasattr(self, "cells"):
-            self.cells = self.view.find_by_selector("meta.cell.corner")
+            cells = self.view.find_by_selector("meta.cell.corner")
+            if cells:
+                self.cells = cells
+
+    def _grid(self, edit):
+        self.view.run_command("append", {"characters": _make_grid()})
 
     def _puzzle(self, edit):
         idx = 0
@@ -147,8 +152,6 @@ class SudokuRenderCommand(sublime_plugin.TextCommand):
                         pos = self.view.text_point(r + offs, c)
                         region = sublime.Region(pos, pos + 4)
                         self.view.replace(edit, region, text)
-
-
 
 
 ###----------------------------------------------------------------------------
