@@ -125,7 +125,9 @@ class SudokuRenderCommand(sublime_plugin.TextCommand):
 
         method = getattr(self, '_' + action)
         if method:
-            method(edit)
+            return method(edit)
+
+        sublime.message_dialog("Unknown Sudoku render command '%s'" % action)
 
     def is_enabled(self, **kwargs):
         return self.view.match_selector(0, "text.plain.sudoku")
