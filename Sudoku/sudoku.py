@@ -109,6 +109,32 @@ class SudokuViewListener(sublime_plugin.ViewEventListener):
         if key == "sudoku":
             return True == operand if operator == sublime.OP_EQUAL else False
 
+    def on_pre_close(self):
+        self.view.settings().set("window_id", self.view.window().id())
+
+    def on_close(self):
+        w = None
+        w_id = self.view.settings().get("window_id")
+        for window in sublime.windows():
+            if window.id() == w_id:
+                w = window
+                break
+
+        if not w:
+            return
+
+        # If this is the only view in this window and there are no folders open
+        # in it, then close the whole window. According to the settings code in
+        # the default package, we need to be careful that we don't accidentally
+        # close the wrong window.
+        if w.num_groups() == 1 and len(w.views_in_group(0)) == 0 and len(w.folders()) == 0:
+            def close_window():
+                if w.id() == sublime.active_window().id():
+                    w.run_command("close_window")
+
+            sublime.set_timeout(close_window, 50)
+
+
 
 ###----------------------------------------------------------------------------
 
