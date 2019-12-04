@@ -4,13 +4,12 @@ hidden: true
 scope: text.plain.sudoku
 contexts:
   main: 
-    # The corner of a cell; sadly this also matches the bottom left of the
-    # grid squares at the end of every three rows.
-    - match: '\+-'
+    # The top left corner of a cell
+    - match: '[/v>+]-'
       scope: meta.cell.corner
 
-    # Standard grid separator
-    - match: '([+|]|-+)'
+    # Grid separator lines
+    - match: '[|-]+'
       scope: meta.cell.separator
 
     # A sequence of two or more of the same digit is an answer

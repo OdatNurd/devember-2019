@@ -6,7 +6,9 @@ import sublime_plugin
 
 
 # String constants for generating our grid of squares for the game board.
-_grid_h = '+----+----+----+'
+_grid_t = '/----v----v----\\'
+_grid_b = '\\----^----^----/'
+_grid_h = '>----+----+----<'
 _grid_v = '|    |    |    |'
 
 
@@ -44,9 +46,12 @@ def _make_grid(view):
     Generate a game grid into the view provided, starting at the current cursor
     location in the view.
     """
+    t = " ".join([_grid_t] * 3) + "\n"
+    b = " ".join([_grid_b] * 3) + "\n"
     h = " ".join([_grid_h] * 3) + "\n"
     v = " ".join([_grid_v] * 3) + "\n"
-    r = ((h + (v * 3)) * 3) + h
+
+    r = (t + (v * 3) + h) + ((v * 3) + h) + ((v * 3) + b)
     g = ((r + "\n") * 3) + "\n"
 
     view.run_command("append", {"characters": g})
