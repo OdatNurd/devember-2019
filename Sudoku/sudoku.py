@@ -72,10 +72,19 @@ def _make_grid(view):
     view.run_command("append", {"characters": g})
 
 
+def _cell(view, region):
+    """
+    Given a region that represents the top left corner of a cell, return back
+    the top left corner of the interior of that cell as a (row, col) tuple.
+    """
+    r, c = view.rowcol(region.a)
+    return (r + 1, c + 1)
+
+
 ###----------------------------------------------------------------------------
 
 
-class SudokuNewGame(sublime_plugin.ApplicationCommand):
+class SudokuNewGameCommand(sublime_plugin.ApplicationCommand):
     """
     Start a new Sudoku game; this spawns a new window for the game and creates
     an appropriate view inside of it to represent the game.
@@ -96,11 +105,50 @@ class SudokuNewGame(sublime_plugin.ApplicationCommand):
         view.set_scratch(True)
 
         _make_grid(view)
+        view.run_command("sudoku_render", {"action": "puzzle"})
 
         # Finalize it now; from this point forward we need to adjust the read
         # only state in order to modify the view.
         view.set_read_only(True)
         view.sel().clear()
+
+
+
+class SudokuRenderCommand(sublime_plugin.TextCommand):
+    """
+    Performs all "rendering" in the game view for us, based on the arguments
+    provided. This allows a single command to cache the list of regions that
+    know where the cells in the grid are situated.
+    """
+    def run(self, edit, action):
+        self._setup_regions()
+
+        method = getattr(self, '_' + action)
+        if method:
+            method(edit)
+
+    def is_enabled(self, **kwargs):
+        return self.view.match_selector(0, "text.plain.sudoku")
+
+    def _setup_regions(self):
+        if not hasattr(self, "cells"):
+            self.cells = self.view.find_by_selector("meta.cell.corner")
+
+    def _puzzle(self, edit):
+        idx = 0
+        for row in _puzzle:
+            for cell in row:
+                r, c = _cell(self.view, self.cells[idx])
+                idx += 1
+                if cell:
+                    text = str(cell) * 4
+
+                    for offs in range(3):
+                        pos = self.view.text_point(r + offs, c)
+                        region = sublime.Region(pos, pos + 4)
+                        self.view.replace(edit, region, text)
+
+
 
 
 ###----------------------------------------------------------------------------
