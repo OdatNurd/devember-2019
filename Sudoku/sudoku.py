@@ -167,6 +167,19 @@ class SudokuBase():
         kwargs["action"] = action
         self.view.run_command("sudoku_render", kwargs)
 
+    def persist(self, name, value):
+        """
+        Persist into the settings of the view the value provided.
+        """
+        self.view.settings().set("sudoku_" + name, value)
+
+    def get(self, name, default=None):
+        """
+        Fetch from the view settings the value of the given name, using the
+        default value given if the setting is not available.
+        """
+        return self.view.settings().get("sudoku_" + name, default)
+
 
 class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
     """
@@ -174,22 +187,22 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
     is used to drive the game and the actions taken by the user.
     """
     def _new_game(self, edit):
-        # These need to be settings to persist
-        self.puzzle = _puzzle
-        self.current_pos = (0, 0)
+        self.persist("puzzle", _puzzle)
+        self.persist("current_pos", [0, 0])
 
         self.render(edit, "grid")
-        self.render(edit, "puzzle", puzzle=self.puzzle)
-        self.render(edit, "hilight", row=self.current_pos[0], col=self.current_pos[1])
+        self.render(edit, "puzzle", puzzle=_puzzle)
+        self.render(edit, "hilight", row=0, col=0)
 
     def _move(self, edit, row, col):
-        new_pos = (
-            max(0, min(self.current_pos[0] + row, 8)),
-            max(0, min(self.current_pos[1] + col, 8))
-            )
+        current_pos = self.get("current_pos", [0, 0])
+        new_pos = [
+            max(0, min(current_pos[0] + row, 8)),
+            max(0, min(current_pos[1] + col, 8))
+            ]
 
-        if new_pos != self.current_pos:
-            self.current_pos = new_pos
+        if new_pos != current_pos:
+            self.persist("current_pos", new_pos)
             self.render(edit, "hilight", row=new_pos[0], col=new_pos[1])
 
 
@@ -218,7 +231,8 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
                         self.view.replace(edit, region, text)
 
     def _hilight(self, edit, row, col):
-        self.view.add_regions("sudoku_highlight", self._frame(row, col), "region.redish")
+        self.view.add_regions("sudoku_highlight", self._frame(row, col), "region.redish",
+                              flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
 
 ###----------------------------------------------------------------------------
