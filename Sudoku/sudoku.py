@@ -58,8 +58,7 @@ def _is_sudoku(obj):
 
 def _make_grid():
     """
-    Generate a game grid into the view provided, starting at the current cursor
-    location in the view.
+    Generate and return a game grid as a string.
     """
     t = " ".join([_grid_t] * 3) + "\n"
     b = " ".join([_grid_b] * 3) + "\n"
@@ -95,8 +94,7 @@ class SudokuNewGameCommand(sublime_plugin.ApplicationCommand):
         view.set_name("Sublime Sudoku")
         view.set_scratch(True)
 
-        view.run_command("sudoku_render", {"action": "grid"})
-        view.run_command("sudoku_render", {"action": "puzzle"})
+        view.run_command("sudoku", {"action": "new_game"})
 
         # Finalize it now; from this point forward we need to adjust the read
         # only state in order to modify the view.
@@ -105,11 +103,9 @@ class SudokuNewGameCommand(sublime_plugin.ApplicationCommand):
 
 
 class SudokuBase():
-
     """
     This is the base class for our Sudoku game commands, and encapsulates all
     of the boilerplate logic needed by those commands.
-
     """
     def run(self, edit, action, **kwargs):
         # If we don't know where our game cells are yet, then try to capture
@@ -192,7 +188,6 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
             max(0, min(self.current_pos[1] + col, 8))
             )
 
-        print(new_pos)
         if new_pos != self.current_pos:
             self.current_pos = new_pos
             self.render(edit, "hilight", row=new_pos[0], col=new_pos[1])
