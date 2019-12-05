@@ -181,6 +181,32 @@ class SudokuBase():
         self.view.run_command("sudoku_render", kwargs)
 
 
+class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
+    """
+    This command acts as the entry point into the game logic; the action given
+    is used to drive the game and the actions taken by the user.
+    """
+    def _new_game(self, edit):
+        # These need to be settings to persist
+        self.puzzle = _puzzle
+        self.current_pos = (0, 0)
+
+        self.render(edit, "grid")
+        self.render(edit, "puzzle", puzzle=self.puzzle)
+        self.render(edit, "hilight", row=self.current_pos[0], col=self.current_pos[1])
+
+    def _move(self, edit, row, col):
+        new_pos = (
+            max(0, min(self.current_pos[0] + row, 8)),
+            max(0, min(self.current_pos[1] + col, 8))
+            )
+
+        print(new_pos)
+        if new_pos != self.current_pos:
+            self.current_pos = new_pos
+            self.render(edit, "hilight", row=new_pos[0], col=new_pos[1])
+
+
 class SudokuRenderCommand(sublime_plugin.TextCommand):
     """
     Performs all "rendering" in the game view for us, based on the arguments
