@@ -235,7 +235,8 @@ class SudokuViewListener(sublime_plugin.ViewEventListener):
         return _is_sudoku(settings)
 
     def on_text_command(self, command, args):
-        if command in ("context_menu", "drag_select", "show_scope_name"):
+        if command in ("context_menu", "drag_select", "show_scope_name",
+                       "undo", "soft_undo", "redo_or_repeat"):
             return ('noop')
 
     def on_query_context(self, key, operator, operand, match_all):
