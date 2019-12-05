@@ -1,0 +1,17 @@
+[
+    { "keys": ["left"], "command": "sudoku", "args": {
+        "action": "move", "row": 0, "col": -1
+    }, "context": [{ "key": "sudoku"} ]},
+
+    { "keys": ["right"], "command": "sudoku", "args": {
+        "action": "move", "row": 0, "col": 1
+    }, "context": [{ "key": "sudoku"} ]},
+
+    { "keys": ["up"], "command": "sudoku", "args": {
+        "action": "move", "row": -1, "col": 0
+    }, "context": [{ "key": "sudoku"} ]},
+
+    { "keys": ["down"], "command": "sudoku", "args": {
+        "action": "move", "row": 1, "col": 0
+    }, "context": [{ "key": "sudoku"} ]},
+]
