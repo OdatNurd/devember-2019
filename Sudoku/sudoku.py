@@ -72,15 +72,6 @@ def _make_grid():
     return g
 
 
-def _cell(view, region):
-    """
-    Given a region that represents the top left corner of a cell, return back
-    the top left corner of the interior of that cell as a (row, col) tuple.
-    """
-    r, c = view.rowcol(region.a)
-    return (r + 1, c + 1)
-
-
 ###----------------------------------------------------------------------------
 
 
@@ -207,38 +198,21 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
             self.render(edit, "hilight", row=new_pos[0], col=new_pos[1])
 
 
-class SudokuRenderCommand(sublime_plugin.TextCommand):
+class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
     """
     Performs all "rendering" in the game view for us, based on the arguments
     provided. This allows a single command to cache the list of regions that
     know where the cells in the grid are situated.
     """
-    def run(self, edit, action):
-        self._setup_regions()
-
-        method = getattr(self, '_' + action)
-        if method:
-            return method(edit)
-
-        sublime.message_dialog("Unknown Sudoku render command '%s'" % action)
-
-    def is_enabled(self, **kwargs):
-        return self.view.match_selector(0, "text.plain.sudoku")
-
-    def _setup_regions(self):
-        if not hasattr(self, "cells"):
-            cells = self.view.find_by_selector("meta.cell.corner")
-            if cells:
-                self.cells = cells
 
     def _grid(self, edit):
         self.view.run_command("append", {"characters": _make_grid()})
 
-    def _puzzle(self, edit):
+    def _puzzle(self, edit, puzzle):
         idx = 0
-        for row in _puzzle:
+        for row in puzzle:
             for cell in row:
-                r, c = _cell(self.view, self.cells[idx])
+                r, c = self._cell(self.cells[idx])
                 idx += 1
                 if cell:
                     text = str(cell) * 4
@@ -247,6 +221,9 @@ class SudokuRenderCommand(sublime_plugin.TextCommand):
                         pos = self.view.text_point(r + offs, c)
                         region = sublime.Region(pos, pos + 4)
                         self.view.replace(edit, region, text)
+
+    def _hilight(self, edit, row, col):
+        self.view.add_regions("sudoku_highlight", self._frame(row, col), "region.redish")
 
 
 ###----------------------------------------------------------------------------
