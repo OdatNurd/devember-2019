@@ -113,6 +113,73 @@ class SudokuNewGameCommand(sublime_plugin.ApplicationCommand):
         view.sel().clear()
 
 
+class SudokuBase():
+
+    """
+    This is the base class for our Sudoku game commands, and encapsulates all
+    of the boilerplate logic needed by those commands.
+
+    """
+    def run(self, edit, action, **kwargs):
+        # If we don't know where our game cells are yet, then try to capture
+        # them now, and save them if we found them.
+        if not hasattr(self, "cells"):
+            cells = self.view.find_by_selector("meta.cell.corner")
+            if cells:
+                self.cells = cells
+                # TODO: Calculculate the width and height based on the offsets
+                self.cell_width = 6
+                self.cell_height = 5
+
+        # Dispatch the command based on the action provided.
+        method = getattr(self, '_' + action)
+        if method:
+            return method(edit, **kwargs)
+
+        sublime.message_dialog("Unknown Sudoku command '%s'" % action)
+
+    def is_enabled(self, **kwargs):
+        return self.view.match_selector(0, "text.plain.sudoku")
+
+    def _span(self, pos, offset, width):
+        """
+        Given a position tuple of (row, col) and an offset tuple, return back a
+        region that starts at the offset position and has the given width.
+        """
+        pos = self.view.text_point(*pos)
+        pos = tuple(map(sum, zip(self.view.rowcol(pos), offset)))
+        pos = self.view.text_point(*pos)
+
+        return sublime.Region(pos, pos + width)
+
+    def _frame(self, row, col):
+        """
+        Given a 0 based row and column, return back a list of regions that
+        represent the frame surrounding that cell.
+        """
+        root = self.view.rowcol(self.cells[(row * 9) + col].begin())
+        return (
+            [self._span(root, (0, 0), self.cell_width)] +
+            [self._span(root, (r, 0), 1) for r in range(1, self.cell_height - 1)] +
+            [self._span(root, (r, self.cell_width - 1), 1) for r in range(1, self.cell_height - 1)] +
+            [self._span(root, (self.cell_height - 1, 0), self.cell_width)])
+
+
+    def _cell(self, region):
+        """
+        Given a region that represents the top left corner of a cell, return back
+        the top left corner of the interior of that cell as a (row, col) tuple.
+        """
+        r, c = self.view.rowcol(region.a)
+        return (r + 1, c + 1)
+
+    def render(self, edit, action, **kwargs):
+        """
+        Invoke the sudoku render command with the given action and arguments.
+        """
+        kwargs["action"] = action
+        self.view.run_command("sudoku_render", kwargs)
+
 
 class SudokuRenderCommand(sublime_plugin.TextCommand):
     """
