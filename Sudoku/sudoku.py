@@ -118,10 +118,14 @@ class SudokuBase():
                 self.cell_width = 6
                 self.cell_height = 5
 
+        # Save the edit object from this invocation for later method use just
+        # for code clarity reasons; this can't be used after the command ends.
+        self.edit = edit
+
         # Dispatch the command based on the action provided.
         method = getattr(self, '_' + action)
         if method:
-            return method(edit, **kwargs)
+            return method(**kwargs)
 
         sublime.message_dialog("Unknown Sudoku command '%s'" % action)
 
@@ -160,7 +164,7 @@ class SudokuBase():
         r, c = self.view.rowcol(region.a)
         return (r + 1, c + 1)
 
-    def render(self, edit, action, **kwargs):
+    def render(self, action, **kwargs):
         """
         Invoke the sudoku render command with the given action and arguments.
         """
@@ -186,15 +190,15 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
     This command acts as the entry point into the game logic; the action given
     is used to drive the game and the actions taken by the user.
     """
-    def _new_game(self, edit):
+    def _new_game(self):
         self.persist("puzzle", _puzzle)
         self.persist("current_pos", [0, 0])
 
-        self.render(edit, "grid")
-        self.render(edit, "puzzle", puzzle=_puzzle)
-        self.render(edit, "hilight", row=0, col=0)
+        self.render("grid")
+        self.render("puzzle", puzzle=_puzzle)
+        self.render("hilight", row=0, col=0)
 
-    def _move(self, edit, row, col):
+    def _move(self, row, col):
         current_pos = self.get("current_pos", [0, 0])
         new_pos = [
             max(0, min(current_pos[0] + row, 8)),
@@ -203,7 +207,7 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
 
         if new_pos != current_pos:
             self.persist("current_pos", new_pos)
-            self.render(edit, "hilight", row=new_pos[0], col=new_pos[1])
+            self.render("hilight", row=new_pos[0], col=new_pos[1])
 
 
 class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
@@ -213,10 +217,10 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
     know where the cells in the grid are situated.
     """
 
-    def _grid(self, edit):
+    def _grid(self):
         self.view.run_command("append", {"characters": _make_grid()})
 
-    def _puzzle(self, edit, puzzle):
+    def _puzzle(self, puzzle):
         idx = 0
         for row in puzzle:
             for cell in row:
@@ -228,9 +232,9 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
                     for offs in range(3):
                         pos = self.view.text_point(r + offs, c)
                         region = sublime.Region(pos, pos + 4)
-                        self.view.replace(edit, region, text)
+                        self.view.replace(self.edit, region, text)
 
-    def _hilight(self, edit, row, col):
+    def _hilight(self, row, col):
         self.view.add_regions("sudoku_highlight", self._frame(row, col), "region.redish",
                               flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
