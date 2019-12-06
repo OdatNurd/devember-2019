@@ -14,4 +14,16 @@
     { "keys": ["down"], "command": "sudoku", "args": {
         "action": "move", "row": 1, "col": 0
     }, "context": [{ "key": "sudoku"} ]},
+
+    { "keys": [" "], "command": "sudoku", "args": {
+        "action": "toggle_hinting",
+    }, "context": [{ "key": "sudoku"} ]},
+
+    { "keys": ["<character>"], "command": "sudoku", "args": {
+        "action": "input",
+    }, "context": [{ "key": "sudoku"}, { "key": "setting.sudoku_hinting", "operand": false } ]},
+    { "keys": ["<character>"], "command": "sudoku", "args": {
+        "action": "hint_input",
+    }, "context": [{ "key": "sudoku"}, { "key": "setting.sudoku_hinting", "operand": true } ]},
+
 ]

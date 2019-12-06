@@ -211,6 +211,25 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
             hinting = self.get("hinting", False)
             self.render("hilight", row=new_pos[0], col=new_pos[1], hinting=hinting)
 
+    def _toggle_hinting(self):
+        hinting = not self.get("hinting", False)
+        self.persist("hinting", hinting)
+
+        pos = self.get("current_pos", [0, 0])
+        self.render("hilight", row=pos[0], col=pos[1], hinting=hinting)
+
+    def _input(self, character):
+        if character == " ":
+            return self._toggle_hinting()
+
+        print("got input '%s'" % character)
+
+    def _hint_input(self, character):
+        if character == " ":
+            return self._toggle_hinting()
+
+        print("got hint '%s'" % character)
+
 
 class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
     """
