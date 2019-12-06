@@ -132,7 +132,7 @@ class SudokuBase():
     def is_enabled(self, **kwargs):
         return self.view.match_selector(0, "text.plain.sudoku")
 
-    def _span(self, pos, offset, width):
+    def span(self, pos, offset, width):
         """
         Given a position tuple of (row, col) and an offset tuple, return back a
         region that starts at the offset position and has the given width.
@@ -143,20 +143,28 @@ class SudokuBase():
 
         return sublime.Region(pos, pos + width)
 
-    def _frame(self, row, col):
+    def frame(self, row, col):
         """
         Given a 0 based row and column, return back a list of regions that
         represent the frame surrounding that cell.
         """
         root = self.view.rowcol(self.cells[(row * 9) + col].begin())
         return (
-            [self._span(root, (0, 0), self.cell_width)] +
-            [self._span(root, (r, 0), 1) for r in range(1, self.cell_height - 1)] +
-            [self._span(root, (r, self.cell_width - 1), 1) for r in range(1, self.cell_height - 1)] +
-            [self._span(root, (self.cell_height - 1, 0), self.cell_width)])
+            [self.span(root, (0, 0), self.cell_width)] +
+            [self.span(root, (r, 0), 1) for r in range(1, self.cell_height - 1)] +
+            [self.span(root, (r, self.cell_width - 1), 1) for r in range(1, self.cell_height - 1)] +
+            [self.span(root, (self.cell_height - 1, 0), self.cell_width)])
 
+    def content(self, row, col):
+        """
+        Given a 0 based row and column, return back a list of regions that
+        represent the inner portion of that cell. This will be one region for
+        each row in the cell.
+        """
+        root = self.view.rowcol(self.cells[(row * 9) + col].begin())
+        return [self.span(root, (r, 1), self.cell_width - 2) for r in range(1, self.cell_height - 1)]
 
-    def _cell(self, region):
+    def cell(self, region):
         """
         Given a region that represents the top left corner of a cell, return back
         the top left corner of the interior of that cell as a (row, col) tuple.
@@ -237,27 +245,31 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
     provided. This allows a single command to cache the list of regions that
     know where the cells in the grid are situated.
     """
+    def cell_fill(self, row, col, puzzle):
+        value = puzzle[row][col]
+        if value:
+            if row % 2 == 0:
+                return ["   ", "+%d+" % value, "   "]
+            else:
+                return ["   ", "x%dx" % value, "   "]
+
+        else:
+            return ["   ", "   ", "   "]
 
     def _grid(self):
         self.view.run_command("append", {"characters": _make_grid()})
 
     def _puzzle(self, puzzle):
-        idx = 0
-        for row in puzzle:
-            for cell in row:
-                r, c = self._cell(self.cells[idx])
-                idx += 1
-                if cell:
-                    text = str(cell) * 3
-
-                    for offs in range(3):
-                        pos = self.view.text_point(r + offs, c)
-                        region = sublime.Region(pos, pos + 3)
-                        self.view.replace(self.edit, region, text)
+        for row in range(0, 9):
+            for col in range(0, 9):
+                fill = self.cell_fill(row, col, puzzle)
+                spans = self.content(row, col)
+                for span, text in zip(spans, fill):
+                    self.view.replace(self.edit, span, text)
 
     def _hilight(self, row, col, hinting=False):
         scope = "region.yellowish" if hinting else "region.greenish"
-        self.view.add_regions("sudoku_highlight", self._frame(row, col), scope,
+        self.view.add_regions("sudoku_highlight", self.frame(row, col), scope,
                               flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
 

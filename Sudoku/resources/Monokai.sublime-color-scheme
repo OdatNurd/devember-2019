@@ -1,0 +1,18 @@
+{
+    "rules":
+    [
+        {
+            "name": "Sudoku Hidden Text",
+            "scope": "text.plain.sudoku & (meta.answer markup | hidden)",
+            "foreground": "color(var(yellow5) alpha(0.01))"
+        },
+        {
+            "scope": "text.plain.sudoku meta.answer.correct answer",
+            "foreground": "var(yellow2)",
+        },
+        {
+            "scope": "text.plain.sudoku meta.answer.incorrect answer",
+            "foreground": "var(red2)",
+        }
+    ]    
+}

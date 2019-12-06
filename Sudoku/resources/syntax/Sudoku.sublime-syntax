@@ -5,17 +5,47 @@ scope: text.plain.sudoku
 contexts:
   main: 
     # The top left corner of a cell
-    - match: '[/v>+]-'
-      scope: meta.cell.corner
+    - match: '[/v>+](?=-)'
+      scope: meta.cell.corner hidden
+
+    # The other hidden cell characters
+    - match: '[\\^</]'
+      scope: hidden
 
     # Grid separator lines
     - match: '[|-]+'
       scope: meta.cell.separator
 
+    - include: correct
+    - include: incorrect
+    - include: hints
+
     # A sequence of two or more of the same digit is an answer
     - match: '(\d)\1{1,}'
       scope: meta.answer entity.name
 
-    # Any single digit is a hint
+
+  # Correct answers are green and surrounded by plus signs
+  correct:
+    - match: '(\+)(\d)(\+)'
+      captures:
+        0: meta.answer.correct
+        1: markup
+        2: answer
+        3: markup
+
+  # Incorrect answers are red and surrounded by x's
+  incorrect:
+    - match: '(x)(\d)(x)'
+      captures:
+        0: meta.answer.incorrect
+        1: markup
+        2: answer
+        3: markup
+
+
+  # Any unmatched single digit in the grid is a hint
+  hints:
     - match: '\d'
       scope: meta.hint comment
+

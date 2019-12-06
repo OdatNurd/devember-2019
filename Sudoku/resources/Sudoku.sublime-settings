@@ -15,6 +15,10 @@
     "font_face": "Square",
     "font_size": 12,
 
+    // We pack in a color scheme that has been modified to suit the game, so
+    // we need to ensure that it gets set here.
+    "color_scheme": "Monokai.sublime-color-scheme",
+
     // Everything centers on the game board
     "draw_centered": true
 }
