@@ -7,10 +7,16 @@
             "foreground": "color(var(yellow5) alpha(0.01))"
         },
         {
+            "scope": "text.plain.sudoku meta.cell.separator",
+            "foreground": "color(var(white3) alpha(0.55))"
+        },
+        {
+            "name": "Sudoku Correct Answers",
             "scope": "text.plain.sudoku meta.answer.correct answer",
             "foreground": "var(yellow2)",
         },
         {
+            "name": "Sudoku Incorrect Answers",
             "scope": "text.plain.sudoku meta.answer.incorrect answer",
             "foreground": "var(red2)",
         }
