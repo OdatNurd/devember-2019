@@ -192,11 +192,12 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
     """
     def _new_game(self):
         self.persist("puzzle", _puzzle)
-        self.persist("current_pos", [0, 0])
+        self.persist("current_pos", [4, 4])
+        self.persist("hinting", False)
 
         self.render("grid")
         self.render("puzzle", puzzle=_puzzle)
-        self.render("hilight", row=0, col=0)
+        self.render("hilight", row=4, col=4, hinting=False)
 
     def _move(self, row, col):
         current_pos = self.get("current_pos", [0, 0])
@@ -207,7 +208,8 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
 
         if new_pos != current_pos:
             self.persist("current_pos", new_pos)
-            self.render("hilight", row=new_pos[0], col=new_pos[1])
+            hinting = self.get("hinting", False)
+            self.render("hilight", row=new_pos[0], col=new_pos[1], hinting=hinting)
 
 
 class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
@@ -227,15 +229,16 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
                 r, c = self._cell(self.cells[idx])
                 idx += 1
                 if cell:
-                    text = str(cell) * 4
+                    text = str(cell) * 3
 
                     for offs in range(3):
                         pos = self.view.text_point(r + offs, c)
-                        region = sublime.Region(pos, pos + 4)
+                        region = sublime.Region(pos, pos + 3)
                         self.view.replace(self.edit, region, text)
 
-    def _hilight(self, row, col):
-        self.view.add_regions("sudoku_highlight", self._frame(row, col), "region.redish",
+    def _hilight(self, row, col, hinting=False):
+        scope = "region.yellowish" if hinting else "region.greenish"
+        self.view.add_regions("sudoku_highlight", self._frame(row, col), scope,
                               flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
 
