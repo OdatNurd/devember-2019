@@ -26,6 +26,36 @@ _puzzle = [
     [0, 7, 3,    4, 8, 1,    0, 0, 5]
 ]
 
+# The state of answers in the puzzle (true is correct, false is wrong)
+_state = [
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+    [True, True, True,    True, True, True,    True, True, True],
+]
+
+# The hint values set up for this field
+_hints = [
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+    [ [], [], [],    [], [], [],    [], [], [] ],
+]
+
 
 ###----------------------------------------------------------------------------
 
@@ -177,7 +207,9 @@ class SudokuBase():
         Invoke the sudoku render command with the given action and arguments.
         """
         kwargs["action"] = action
+        self.view.set_read_only(False)
         self.view.run_command("sudoku_render", kwargs)
+        self.view.set_read_only(True)
 
     def persist(self, name, value):
         """
@@ -200,12 +232,24 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
     """
     def _new_game(self):
         self.persist("puzzle", _puzzle)
+        self.persist("state", _state)
+        self.persist("hints", _hints)
         self.persist("current_pos", [4, 4])
         self.persist("hinting", False)
 
-        self.render("grid")
-        self.render("puzzle", puzzle=_puzzle)
-        self.render("hilight", row=4, col=4, hinting=False)
+        self._redraw(complete=True)
+
+    def _redraw(self, complete=False):
+        puzzle = self.get("puzzle")
+        state = self.get("state")
+        hints = self.get("hints")
+        pos = self.get("current_pos")
+        hinting = self.get("hinting")
+
+        if complete:
+            self.render("grid")
+        self.render("puzzle", puzzle=puzzle, state=state, hints=hints)
+        self.render("hilight", row=pos[0], col=pos[1], hinting=hinting)
 
     def _move(self, row, col):
         current_pos = self.get("current_pos", [0, 0])
@@ -239,30 +283,40 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
         print("got hint '%s'" % character)
 
 
+
 class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
     """
     Performs all "rendering" in the game view for us, based on the arguments
     provided. This allows a single command to cache the list of regions that
     know where the cells in the grid are situated.
     """
-    def cell_fill(self, row, col, puzzle):
+    def cell_fill(self, row, col, puzzle, state, hints):
         value = puzzle[row][col]
-        if value:
-            if row % 2 == 0:
-                return ["   ", "+%d+" % value, "   "]
-            else:
-                return ["   ", "x%dx" % value, "   "]
+        correct = state[row][col]
+        hint = hints[row][col]
 
-        else:
-            return ["   ", "   ", "   "]
+        if value:
+            text = "+%d+" if correct else "x%dx"
+            return ["   ", text % value, "   "]
+
+        if hint:
+            result = ["", "", ""]
+            for value in range(1, 10):
+                c = "%d" % value if value in hint else " "
+                result[(value - 1) // 3] += c
+
+            return result
+
+        return ["   ", "   ", "   "]
 
     def _grid(self):
-        self.view.run_command("append", {"characters": _make_grid()})
+        grid_region = sublime.Region(0, len(self.view))
+        self.view.replace(self.edit, grid_region , _make_grid())
 
-    def _puzzle(self, puzzle):
+    def _puzzle(self, puzzle, state, hints):
         for row in range(0, 9):
             for col in range(0, 9):
-                fill = self.cell_fill(row, col, puzzle)
+                fill = self.cell_fill(row, col, puzzle, state, hints)
                 spans = self.content(row, col)
                 for span, text in zip(spans, fill):
                     self.view.replace(self.edit, span, text)

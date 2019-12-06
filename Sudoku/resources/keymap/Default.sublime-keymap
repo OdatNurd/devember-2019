@@ -15,8 +15,8 @@
         "action": "move", "row": 1, "col": 0
     }, "context": [{ "key": "sudoku"} ]},
 
-    { "keys": [" "], "command": "sudoku", "args": {
-        "action": "toggle_hinting",
+    { "keys": ["f5"], "command": "sudoku", "args": {
+        "action": "redraw",
     }, "context": [{ "key": "sudoku"} ]},
 
     { "keys": ["<character>"], "command": "sudoku", "args": {
