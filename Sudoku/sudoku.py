@@ -6,10 +6,10 @@ import sublime_plugin
 
 
 # String constants for generating our grid of squares for the game board.
-_grid_t = '/----v----v----\\'
-_grid_b = '\\----^----^----/'
-_grid_h = '>----+----+----<'
-_grid_v = '|    |    |    |'
+_grid_t = '/---v---v---\\'
+_grid_b = '\\---^---^---/'
+_grid_h = '>---+---+---<'
+_grid_v = '|   |   |   |'
 
 # Our sample puzzle
 _puzzle = [
@@ -115,7 +115,7 @@ class SudokuBase():
             if cells:
                 self.cells = cells
                 # TODO: Calculculate the width and height based on the offsets
-                self.cell_width = 6
+                self.cell_width = 5
                 self.cell_height = 5
 
         # Save the edit object from this invocation for later method use just

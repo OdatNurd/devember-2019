@@ -6,6 +6,15 @@
     "word_wrap": false,
     "highlight_line": false,
 
+    // This sets a font whose glyphs are squares, which seems to work well in
+    // this context since Sudoku grids are squares; if this font is missing
+    // everything will still work, but it will look tall and skinny.
+    //
+    // The font itself is by Wouter van Oortmerssen and is licensed CC BY 3.0.
+    // You can get it at:  http://strlen.com/square/
+    "font_face": "Square",
+    "font_size": 12,
+
     // Everything centers on the game board
     "draw_centered": true
 }
