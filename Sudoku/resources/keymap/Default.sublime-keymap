@@ -22,6 +22,13 @@
     { "keys": ["<character>"], "command": "sudoku", "args": {
         "action": "input",
     }, "context": [{ "key": "sudoku"}, { "key": "setting.sudoku_hinting", "operand": false } ]},
+
+    // Simulate pressing 0 when backspacing on a cell
+    { "keys": ["backspace"], "command": "sudoku", "args": {
+        "action": "input",
+        "character": "0"
+    }, "context": [{ "key": "sudoku"}, { "key": "setting.sudoku_hinting", "operand": false } ]},
+
     { "keys": ["<character>"], "command": "sudoku", "args": {
         "action": "hint_input",
     }, "context": [{ "key": "sudoku"}, { "key": "setting.sudoku_hinting", "operand": true } ]},

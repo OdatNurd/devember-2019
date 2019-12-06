@@ -274,13 +274,49 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
         if character == " ":
             return self._toggle_hinting()
 
-        print("got input '%s'" % character)
+        correct = True
+        shifted = "!@#$%^&*("
+        if character in shifted:
+            correct = False
+            character = str(shifted.find(character) + 1)
+
+        # TODO: Render only the current cell, not all cells
+        if character.isdigit():
+            user_hint = int(character)
+
+            pos = self.get("current_pos")
+            puzzle_data = self.get("puzzle")
+            puzzle_state = self.get("state")
+
+            # TODO: detect correctness and select state appropriately
+            puzzle_data[pos[0]][pos[1]] = user_hint
+            puzzle_state[pos[0]][pos[1]] = correct
+
+            self.persist("puzzle", puzzle_data)
+            self.persist("state", puzzle_state)
+            self._redraw(complete=False)
 
     def _hint_input(self, character):
         if character == " ":
             return self._toggle_hinting()
 
-        print("got hint '%s'" % character)
+        # TODO: Render only the current cell, not all cells
+        if character.isdigit():
+            user_hint = int(character)
+
+            pos = self.get("current_pos")
+            puzzle_data = self.get("puzzle")
+            puzzle_hints = self.get("hints")
+
+            hint_list = puzzle_hints[pos[0]][pos[1]]
+            if user_hint and not puzzle_data[pos[0]][pos[1]]:
+                if user_hint in hint_list:
+                    hint_list.remove(user_hint)
+                else:
+                    hint_list.append(user_hint)
+
+                self.persist("hints", puzzle_hints)
+                self._redraw(complete=False)
 
 
 
