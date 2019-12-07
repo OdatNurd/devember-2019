@@ -1,6 +1,8 @@
 import sublime
 import sublime_plugin
 
+from collections import Counter
+
 
 ###----------------------------------------------------------------------------
 
@@ -99,6 +101,49 @@ def _make_grid():
     g = ((r + "\n") * 3) + "\n"
 
     return g
+
+
+def _validate_board(data, state):
+    """
+    Given a puzzle and state, check to see which cell positions appear to be
+    valid or invalid and update the state as appropriate so that all cells with
+    an answer are properly flagged.
+    """
+    # Collect the values in each row that appear more than once.
+    i_rows = []
+    for row in range(0, 9):
+        i_rows.append([k for k,v in Counter(data[row]).items() if k != 0 and v > 1])
+
+    # Collect the values in each column that appear more than once.
+    i_cols = []
+    for col in range(0, 9):
+        raw = []
+        for row in range(0, 9):
+            raw.append(data[row][col])
+
+        i_cols.append([k for k,v in Counter(raw).items() if k != 0 and v > 1])
+
+    # Collect the values in each grid that appear more than once.
+    raw = [[] for r in range(0, 9)]
+    for row in range(0, 9):
+        for col in range(0, 9):
+            grid = (col // 3) + ((row // 3) * 3)
+
+            raw[grid].append(data[row][col])
+
+    i_grids = [[k for k,v in Counter(raw[r]).items() if k != 0 and v > 1] for r in range(0, 9) ]
+
+    # Scan every cell in the puzzle and mark it based on whether it's value
+    # appears as a duplicate in any of the three lists.
+    for row in range(0, 9):
+        for col in range(0, 9):
+            v = data[row][col]
+            if v:
+                grid = (col // 3) + ((row // 3) * 3)
+
+                state[row][col] = (False
+                                    if v in i_rows[row] or v in i_cols[col] or v in i_grids[grid]
+                                    else True)
 
 
 ###----------------------------------------------------------------------------
@@ -274,23 +319,17 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
         if character == " ":
             return self._toggle_hinting()
 
-        correct = True
-        shifted = "!@#$%^&*("
-        if character in shifted:
-            correct = False
-            character = str(shifted.find(character) + 1)
-
         # TODO: Render only the current cell, not all cells
         if character.isdigit():
-            user_hint = int(character)
+            new_value = int(character)
 
             pos = self.get("current_pos")
             puzzle_data = self.get("puzzle")
             puzzle_state = self.get("state")
 
-            # TODO: detect correctness and select state appropriately
-            puzzle_data[pos[0]][pos[1]] = user_hint
-            puzzle_state[pos[0]][pos[1]] = correct
+            # Set in the value, then validate the new board state/
+            puzzle_data[pos[0]][pos[1]] = new_value
+            _validate_board(puzzle_data, puzzle_state)
 
             self.persist("puzzle", puzzle_data)
             self.persist("state", puzzle_state)
