@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 
 from collections import Counter
+from itertools import chain
 
 
 ###----------------------------------------------------------------------------
@@ -141,9 +142,8 @@ def _validate_board(data, state):
             if v:
                 grid = (col // 3) + ((row // 3) * 3)
 
-                state[row][col] = (False
-                                    if v in i_rows[row] or v in i_cols[col] or v in i_grids[grid]
-                                    else True)
+
+                state[row][col] = v not in chain(i_rows[row], i_cols[col], i_grids[grid])
 
 
 ###----------------------------------------------------------------------------
