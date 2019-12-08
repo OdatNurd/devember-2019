@@ -225,10 +225,10 @@ class SudokuBase():
         """
         root = self.view.rowcol(self.cells[(row * 9) + col].begin())
         return (
-            [self.span(root, (0, 0), self.cell_width)] +
+            [self.span(root, (0, 1), self.cell_width - 2)] +
             [self.span(root, (r, 0), 1) for r in range(1, self.cell_height - 1)] +
             [self.span(root, (r, self.cell_width - 1), 1) for r in range(1, self.cell_height - 1)] +
-            [self.span(root, (self.cell_height - 1, 0), self.cell_width)])
+            [self.span(root, (self.cell_height - 1, 1), self.cell_width - 2)])
 
     def content(self, row, col):
         """
