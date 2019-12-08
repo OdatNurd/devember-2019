@@ -20,11 +20,6 @@ contexts:
     - include: incorrect
     - include: hints
 
-    # A sequence of two or more of the same digit is an answer
-    - match: '(\d)\1{1,}'
-      scope: meta.answer entity.name
-
-
   # Correct answers are green and surrounded by plus signs
   correct:
     - match: '(\+)(\d)(\+)'

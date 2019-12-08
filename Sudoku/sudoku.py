@@ -291,12 +291,17 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
         pos = self.get("current_pos")
         hinting = self.get("hinting")
 
+        value = puzzle[pos[0]][pos[1]]
+
         if complete:
             self.render("grid")
         self.render("puzzle", puzzle=puzzle, state=state, hints=hints)
-        self.render("hilight", row=pos[0], col=pos[1], hinting=hinting)
+        self.render("hilight_cell", row=pos[0], col=pos[1], hinting=hinting)
+        self.render("hilight_values", value=value, puzzle=puzzle)
+
 
     def _move(self, row, col):
+        puzzle = self.get("puzzle")
         current_pos = self.get("current_pos", [0, 0])
         new_pos = [
             max(0, min(current_pos[0] + row, 8)),
@@ -306,14 +311,16 @@ class SudokuCommand(SudokuBase, sublime_plugin.TextCommand):
         if new_pos != current_pos:
             self.persist("current_pos", new_pos)
             hinting = self.get("hinting", False)
-            self.render("hilight", row=new_pos[0], col=new_pos[1], hinting=hinting)
+            self.render("hilight_cell", row=new_pos[0], col=new_pos[1], hinting=hinting)
+            value = puzzle[new_pos[0]][new_pos[1]]
+            self.render("hilight_values", value=value, puzzle=puzzle)
 
     def _toggle_hinting(self):
         hinting = not self.get("hinting", False)
         self.persist("hinting", hinting)
 
         pos = self.get("current_pos", [0, 0])
-        self.render("hilight", row=pos[0], col=pos[1], hinting=hinting)
+        self.render("hilight_cell", row=pos[0], col=pos[1], hinting=hinting)
 
     def _input(self, character):
         if character == " ":
@@ -396,10 +403,23 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
                 for span, text in zip(spans, fill):
                     self.view.replace(self.edit, span, text)
 
-    def _hilight(self, row, col, hinting=False):
+    def _hilight_cell(self, row, col, hinting=False):
         scope = "sudoku.cursor.hinting" if hinting else "sudoku.cursor.editing"
         self.view.add_regions("sudoku_highlight", self.frame(row, col), scope,
                               flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
+
+    def _hilight_values(self, value, puzzle):
+        n = str(value)
+        v = self.view
+
+        # Find all regions that are right or wrong that match the value that we
+        # were given.
+        right = [r for r in v.find_by_selector("meta.answer.correct answer") if v.substr(r) == n]
+        wrong = [r for r in v.find_by_selector("meta.answer.incorrect answer") if v.substr(r) == n]
+        v.add_regions("sudoku_hilight_right", right, "sudoku.correct.selected",
+                      flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
+        v.add_regions("sudoku_hilight_wrong", wrong, "sudoku.incorrect.selected",
+                      flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
 
 ###----------------------------------------------------------------------------

@@ -13,12 +13,26 @@
         {
             "name": "Sudoku Correct Answers",
             "scope": "text.plain.sudoku meta.answer.correct answer",
+            "foreground": "color(var(yellow2) alpha(0.55))",
+        },
+        {
+            "name": "Sudoku Correct Answers - Selected",
+            "scope": "sudoku.correct.selected",
             "foreground": "var(yellow2)",
+            "background": "#282922"
+            // "black3": "hsl(70, 8%, 15%)" adjusted 1 down
         },
         {
             "name": "Sudoku Incorrect Answers",
             "scope": "text.plain.sudoku meta.answer.incorrect answer",
+            "foreground": "color(var(red2) alpha(0.55))",
+        },
+        {
+            "name": "Sudoku Incorrect Answers - Selected",
+            "scope": "sudoku.incorrect.selected",
             "foreground": "var(red2)",
+            "background": "#282922"
+            // "black3": "hsl(70, 8%, 15%)" adjusted 1 down
         },
 
         {
