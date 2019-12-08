@@ -19,6 +19,17 @@
             "name": "Sudoku Incorrect Answers",
             "scope": "text.plain.sudoku meta.answer.incorrect answer",
             "foreground": "var(red2)",
-        }
+        },
+
+        {
+            "name": "Sudoku Cursor - Editing",
+            "scope": "sudoku.cursor.editing",
+            "foreground": "hsl(90, 76%, 53%)",
+        },
+        {
+            "name": "Sudoku Cursor - Hinting",
+            "scope": "sudoku.cursor.hinting",
+            "foreground": "hsl(0, 0%, 60%)",
+        },
     ]    
 }

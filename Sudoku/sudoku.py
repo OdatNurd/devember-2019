@@ -397,7 +397,7 @@ class SudokuRenderCommand(SudokuBase, sublime_plugin.TextCommand):
                     self.view.replace(self.edit, span, text)
 
     def _hilight(self, row, col, hinting=False):
-        scope = "region.yellowish" if hinting else "region.greenish"
+        scope = "sudoku.cursor.hinting" if hinting else "sudoku.cursor.editing"
         self.view.add_regions("sudoku_highlight", self.frame(row, col), scope,
                               flags=sublime.DRAW_NO_OUTLINE|sublime.PERSISTENT)
 
