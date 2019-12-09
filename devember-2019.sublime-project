@@ -6,6 +6,10 @@
 			"path": "./Sudoku"
 		},
 		{
+			"name": "GZipper",
+			"path": "./GZipper"
+		},
+		{
 			"name": "Wiki",
 			"path": "../devember-2019.wiki"
 		}
