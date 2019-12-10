@@ -31,6 +31,15 @@ def gz_setting(key):
     return gz_setting.obj.get(key, default)
 
 
+def home_relative_path(path):
+    """
+    Given a filename, return back a version relative to the home directory,
+    if that's applicable.
+    """
+    home = os.path.expanduser("~")
+    return path if not path.startswith(home) else "~" + path[len(home):]
+
+
 ###----------------------------------------------------------------------------
 
 
@@ -63,6 +72,9 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
             # tracking.
             gzView = self.view.window().open_file(new_name)
             gzView.settings().set("_gzip_name", org_name)
+
+            # Flag the view as a gzipped file
+            gzView.set_status("gzipper", "[gzipped file]")
 
             # Close our view now
             self.view.close()
@@ -102,6 +114,11 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
         with gzip.open(org_filename, 'wb') as outfile:
             with open(self.view.file_name(), 'rb') as infile:
                 shutil.copyfileobj(infile, outfile)
+
+        # Show a status message after the command exits, so we can override
+        # the default save message.
+        sublime.set_timeout(lambda: self.view.window().status_message(
+            "Compressed %s" % home_relative_path(org_filename)))
 
 
 ###----------------------------------------------------------------------------
