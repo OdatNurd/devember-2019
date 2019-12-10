@@ -1,0 +1,25 @@
+[
+    {
+        "caption": "GZipper: Open Readme",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/GZipper/README.md"
+        }
+    },
+    { 
+        "caption": "Preferences: GZipper Settings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/GZipper/GZipper.sublime-settings",
+            "default": "{\n\t$0\n}\n"
+        }
+    },
+    {
+        "caption": "Preferences: GZipper Key Bindings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/GZipper/Default (${platform}).sublime-keymap",
+            "default": "[\n\t$0\n]\n"
+        }
+    }
+]
