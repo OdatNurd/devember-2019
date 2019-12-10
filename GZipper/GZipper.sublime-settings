@@ -1,3 +1,7 @@
 {
-
+    // When true, opening any file that appears to be a gzipped file will cause
+    // the package to attempt to open it as a gzipped file. When set to false,
+    // you must trigger the command manually for a file that has already been
+    // opened.
+    "unzip_on_load": true,
 }

@@ -1,4 +1,6 @@
 [
+    { "caption": "GZipper: Unzip and Edit", "command": "reopen_as_gzip" },
+
     {
         "caption": "GZipper: Open Readme",
         "command": "open_file",

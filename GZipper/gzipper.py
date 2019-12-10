@@ -9,6 +9,31 @@ import shutil
 ###----------------------------------------------------------------------------
 
 
+def plugin_loaded():
+    """
+    On plugin load, cache the settings object for our package.
+    """
+    gz_setting.obj = sublime.load_settings("GZipper.sublime-settings")
+    gz_setting.default = {
+        "unzip_on_load": True
+    }
+
+
+###----------------------------------------------------------------------------
+
+
+def gz_setting(key):
+    """
+    Get a package setting from the cached settings object with a sensible
+    default.
+    """
+    default = gz_setting.default.get(key, None)
+    return gz_setting.obj.get(key, default)
+
+
+###----------------------------------------------------------------------------
+
+
 class ReopenAsGzipCommand(sublime_plugin.TextCommand):
     """
     For a view that is a gzipped file, this will open up a new view that is
@@ -16,7 +41,6 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
     will re-create this gzipped file on save.
     """
     def run(self, edit):
-        print('running for "%s"' % self.view.file_name())
         # Save the current file name so that we can recreate this file later.
         org_name = self.view.file_name()
 
@@ -37,8 +61,6 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
 
             # Open the uncompressed file and tell it what gzipped file it's
             # tracking.
-            # Create the view that will hold our uncompressed file, then tell it
-            # that it's tracking the new file
             gzView = self.view.window().open_file(new_name)
             gzView.settings().set("_gzip_name", org_name)
 
@@ -92,7 +114,8 @@ class GzipLoadListener(sublime_plugin.EventListener):
     the command will not enable itself for other files.
     """
     def on_load(self, view):
-        view.run_command("reopen_as_gzip")
+        if gz_setting("unzip_on_load"):
+            view.run_command("reopen_as_gzip")
 
 
 ###----------------------------------------------------------------------------
