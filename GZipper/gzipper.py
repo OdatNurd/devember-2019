@@ -120,6 +120,30 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
 ###----------------------------------------------------------------------------
 
 
+class GzipCompressCommand(sublime_plugin.TextCommand):
+    """
+    For a view that is not currently a gzipped file, create a compressed
+    version of the file on disk,
+    """
+    def run(self, edit, only_compress=False, delete_on_close=False):
+        new_name = self.view.file_name() + ".gz"
+        gzip_file(self.view.file_name(), new_name)
+
+        if only_compress:
+            return
+
+        self.view.settings().set("_gz_name", new_name)
+        self.view.settings().set("_gz_delete", delete_on_close)
+
+        gzView.set_status("gzipper", "[gzipped file]")
+
+    def is_enabled(self, only_compress=False, delete_on_close=False):
+        return not is_gzip_file(self.view)
+
+
+###----------------------------------------------------------------------------
+
+
 class GzipFileListener(sublime_plugin.ViewEventListener):
     """
     Event listener exclusively for Gzipped file instances; every time a file

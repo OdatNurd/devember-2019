@@ -1,6 +1,9 @@
 [
     { "caption": "GZipper: Unzip and Edit", "command": "reopen_as_gzip" },
 
+    { "caption": "GZipper: Create Compressed Version", "command": "gzip_compress", "args": {"only_compress": true}},
+    { "caption": "GZipper: Convert to Gzip", "command": "gzip_compress", "args": {"only_compress": false, "delete_on_close": true}},
+
     {
         "caption": "GZipper: Open Readme",
         "command": "open_file",
