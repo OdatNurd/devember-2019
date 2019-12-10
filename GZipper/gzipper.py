@@ -156,7 +156,10 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
 
     def on_close(self):
         if self.view.settings().get("_gz_delete", False):
-            os.remove(self.view.file_name())
+            # Import send2trash on demand; see Default/side_bar.py.
+            import Default.send2trash as send2trash
+
+            send2trash.send2trash(self.view.file_name())
 
     def on_post_save(self):
         gzip_file(self.view.file_name(), self.view.settings().get("_gz_name"))
