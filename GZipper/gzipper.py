@@ -41,6 +41,35 @@ def home_relative_path(path):
     return path if not path.startswith(home) else "~" + path[len(home):]
 
 
+def is_gzip_file(view):
+    """
+    Given a view, determine if that view (probably) contains a gzipped file
+    or not. This is currently based on a combination of the extension and the
+    file being a binary file with the right magic bytes.
+    """
+    return (view.encoding() == "Hexadecimal" and
+            view.substr(sublime.Region(0, 4)) == "1f8b" and
+            view.file_name() is not None and view.file_name().endswith(".gz"))
+
+
+def gzip_file(from_path, to_path):
+    """
+    Compress a file on disk to the file named.
+    """
+    with gzip.open(to_path, 'wb', gz_setting('compression_level')) as outfile:
+        with open(from_path, 'rb') as infile:
+            shutil.copyfileobj(infile, outfile)
+
+
+def gunzip_file(from_path, to_path):
+    """
+    Uncompress a file on disk to the file named.
+    """
+    with gzip.open(from_path, 'rb') as infile:
+        with open(to_path, 'wb') as outfile:
+            shutil.copyfileobj(infile, outfile)
+
+
 ###----------------------------------------------------------------------------
 
 
@@ -65,21 +94,19 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         new_name = os.path.join(path, name + "_ungz" + ext)
 
         # Uncompress the file into the buffer now.
-        with gzip.open(org_name, 'rb') as infile:
-            with open(new_name, 'wb') as outfile:
-                shutil.copyfileobj(infile, outfile)
+        gunzip_file(org_name, new_name)
 
-            # Open the uncompressed file and tell it what gzipped file it's
-            # tracking.
-            gzView = self.view.window().open_file(new_name)
-            gzView.settings().set("_gzip_name", org_name)
-            gzView.settings().set("_gzip_delete", True)
+        # Open the uncompressed file and tell it what gzipped file it's
+        # tracking.
+        gzView = self.view.window().open_file(new_name)
+        gzView.settings().set("_gz_name", org_name)
+        gzView.settings().set("_gz_delete", True)
 
-            # Flag the view as a gzipped file
-            gzView.set_status("gzipper", "[gzipped file]")
+        # Flag the view as a gzipped file
+        gzView.set_status("gzipper", "[gzipped file]")
 
-            # Close our view now
-            self.view.close()
+        # Close our view now
+        self.view.close()
 
 
     def is_enabled(self):
@@ -87,11 +114,7 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         Only enable the command for files with a .gz extension (so that we can
         get the underlying name of the file) which are also gzipped files.
         """
-        v = self.view
-        return (v.encoding() == "Hexadecimal" and
-                v.substr(sublime.Region(0, 4)) == "1f8b" and
-                v.file_name() is not None and
-                v.file_name().endswith(".gz"))
+        return is_gzip_file(self.view)
 
 
 ###----------------------------------------------------------------------------
@@ -105,18 +128,14 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
     """
     @classmethod
     def is_applicable(cls, settings):
-        return settings.has("_gzip_name")
+        return settings.has("_gz_name")
 
     def on_close(self):
-        if self.view.settings().get("_gzip_delete", False):
+        if self.view.settings().get("_gz_delete", False):
             os.remove(self.view.file_name())
 
     def on_post_save(self):
-        org_filename = self.view.settings().get("_gzip_name")
-
-        with gzip.open(org_filename, 'wb', gz_setting('compression_level')) as outfile:
-            with open(self.view.file_name(), 'rb', ) as infile:
-                shutil.copyfileobj(infile, outfile)
+        gzip_file(self.view.file_name(), self.view.settings().get("_gz_name"))
 
         # Show a status message after the command exits, so we can override
         # the default save message.
