@@ -73,6 +73,7 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
             # tracking.
             gzView = self.view.window().open_file(new_name)
             gzView.settings().set("_gzip_name", org_name)
+            gzView.settings().set("_gzip_delete", True)
 
             # Flag the view as a gzipped file
             gzView.set_status("gzipper", "[gzipped file]")
@@ -107,7 +108,8 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
         return settings.has("_gzip_name")
 
     def on_close(self):
-        os.remove(self.view.file_name())
+        if self.view.settings().get("_gzip_delete", False):
+            os.remove(self.view.file_name())
 
     def on_post_save(self):
         org_filename = self.view.settings().get("_gzip_name")
