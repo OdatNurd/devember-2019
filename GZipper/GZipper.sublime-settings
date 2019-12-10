@@ -4,4 +4,11 @@
     // you must trigger the command manually for a file that has already been
     // opened.
     "unzip_on_load": true,
+
+    // Set the gzip compression level used when compressing files. The value can
+    // be anywhere from 0 to 9. The higher the number, the more compression
+    // there is at the expense of compression speed.
+    //
+    // A value of 0 turns off compression entirely.
+    "compression_level": 9,
 }

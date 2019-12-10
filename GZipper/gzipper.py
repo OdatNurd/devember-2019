@@ -15,7 +15,8 @@ def plugin_loaded():
     """
     gz_setting.obj = sublime.load_settings("GZipper.sublime-settings")
     gz_setting.default = {
-        "unzip_on_load": True
+        "unzip_on_load": True,
+        "compression_level": 9,
     }
 
 
@@ -111,8 +112,8 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
     def on_post_save(self):
         org_filename = self.view.settings().get("_gzip_name")
 
-        with gzip.open(org_filename, 'wb') as outfile:
-            with open(self.view.file_name(), 'rb') as infile:
+        with gzip.open(org_filename, 'wb', gz_setting('compression_level')) as outfile:
+            with open(self.view.file_name(), 'rb', ) as infile:
                 shutil.copyfileobj(infile, outfile)
 
         # Show a status message after the command exits, so we can override

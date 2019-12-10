@@ -21,3 +21,7 @@ This package provides the following settings:
     check automatically on every file load to see if the current file is a
     `gzip` file, and if so unzip and open it for editing.
 
+    * `compression_level` (default: 9) controls how much compression is used
+    when writing the output file. This value can range from 0 to 9, where 0 is
+    no compression and 9 is maximum compression. Compression takes longer at
+    higher settings.
