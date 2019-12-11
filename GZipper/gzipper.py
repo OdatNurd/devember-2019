@@ -162,12 +162,13 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
             send2trash.send2trash(self.view.file_name())
 
     def on_post_save(self):
-        gzip_file(self.view.file_name(), self.view.settings().get("_gz_name"))
+        archive_name = self.view.settings().get("_gz_name")
+        gzip_file(self.view.file_name(), archive_name)
 
         # Show a status message after the command exits, so we can override
         # the default save message.
         sublime.set_timeout(lambda: self.view.window().status_message(
-            "Compressed %s" % home_relative_path(org_filename)))
+            "Compressed %s" % home_relative_path(archive_name)))
 
 
 ###----------------------------------------------------------------------------
