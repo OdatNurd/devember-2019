@@ -70,6 +70,45 @@ def gunzip_file(from_path, to_path):
             shutil.copyfileobj(infile, outfile)
 
 
+def trash_file(filename):
+    """
+    Given a file name, send it to the trash on the system.
+    """
+    # Import send2trash on demand; see Default/side_bar.py.
+    import Default.send2trash as send2trash
+
+    send2trash.send2trash(filename)
+
+
+def apply_gzip_settings(view, temp_name, gzip_name, delete_on_close):
+    """
+    Given a view, apply the appropriate settings to indicate to the plugin
+    that the view represents a gzipped file. The temp_name is the version of
+    the file that is being edited.
+    """
+    settings = view.settings()
+
+    settings.set("_gz_tmp_name", temp_name)
+    settings.set("_gz_name", gzip_name)
+    settings.set("_gz_delete", delete_on_close)
+
+    # Flag the view as a gzipped file
+    view.set_status("gzipper", "[gzipped file]")
+
+
+def remove_gzip_settings(view):
+    """
+    Given a view, remove the settings that mark it as being a gzipped file
+    buffer.
+    """
+    settings = view.settings()
+
+    settings.erase("_gz_tmp_name")
+    settings.erase("_gz_name")
+    settings.erase("_gz_delete")
+    view.erase_status("gzipper")
+
+
 ###----------------------------------------------------------------------------
 
 
@@ -99,12 +138,7 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         # Open the uncompressed file and tell it what gzipped file it's
         # tracking.
         gzView = self.view.window().open_file(new_name)
-        gzView.settings().set("_gz_tmp_name", new_name)
-        gzView.settings().set("_gz_name", org_name)
-        gzView.settings().set("_gz_delete", True)
-
-        # Flag the view as a gzipped file
-        gzView.set_status("gzipper", "[gzipped file]")
+        apply_gzip_settings(gzView, new_name, org_name, delete_on_close=True)
 
         # Close our view now
         self.view.close()
@@ -127,18 +161,14 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
     version of the file on disk,
     """
     def run(self, edit, only_compress=False, delete_on_close=False):
-        new_name = self.view.file_name() + ".gz"
-        gzip_file(self.view.file_name(), new_name)
+        current_name = self.view.file_name()
+        gzip_name = current_name + ".gz"
+        gzip_file(current_name, gzip_name)
 
         if only_compress:
             return
 
-        self.view.settings().set("_gz_name", new_name)
-        self.view.settings().set("_gz_delete", delete_on_close)
-        if delete_on_close:
-            self.view.settings().set("_gz_tmp_name", self.view.file_name())
-
-        gzView.set_status("gzipper", "[gzipped file]")
+        apply_gzip_settings(self.view, current_name, gzip_name, delete_on_close)
 
     def is_enabled(self, only_compress=False, delete_on_close=False):
         return not is_gzip_file(self.view)
@@ -159,10 +189,7 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
 
     def on_close(self):
         if self.view.settings().get("_gz_delete", False):
-            # Import send2trash on demand; see Default/side_bar.py.
-            import Default.send2trash as send2trash
-
-            send2trash.send2trash(self.view.file_name())
+            trash_file(self.view.file_name())
 
     def on_pre_save(self):
         s = self.view.settings()
@@ -170,14 +197,10 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
             # Get rid of the old temporary file since we're effectively
             # closing it.
             if s.get("_gz_delete", False):
-                import Default.send2trash as send2trash
-                send2trash.send2trash(s.get("_gz_tmp_name"))
+                trash_file(s.get("_gz_tmp_name"))
 
             # Erase the settings that we use to track ourselves.
-            s.erase("_gz_name")
-            s.erase("_gz_tmp_name")
-            s.erase("_gz_delete")
-            self.view.erase_status("gzipper")
+            remove_gzip_settings(self.view)
 
     def on_post_save(self):
         archive_name = self.view.settings().get("_gz_name")
