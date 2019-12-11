@@ -99,6 +99,7 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         # Open the uncompressed file and tell it what gzipped file it's
         # tracking.
         gzView = self.view.window().open_file(new_name)
+        gzView.settings().set("_gz_tmp_name", new_name)
         gzView.settings().set("_gz_name", org_name)
         gzView.settings().set("_gz_delete", True)
 
@@ -134,6 +135,8 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
 
         self.view.settings().set("_gz_name", new_name)
         self.view.settings().set("_gz_delete", delete_on_close)
+        if delete_on_close:
+            self.view.settings().set("_gz_tmp_name", self.view.file_name())
 
         gzView.set_status("gzipper", "[gzipped file]")
 
@@ -160,6 +163,21 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
             import Default.send2trash as send2trash
 
             send2trash.send2trash(self.view.file_name())
+
+    def on_pre_save(self):
+        s = self.view.settings()
+        if s.get("_gz_tmp_name") != self.view.file_name():
+            # Get rid of the old temporary file since we're effectively
+            # closing it.
+            if s.get("_gz_delete", False):
+                import Default.send2trash as send2trash
+                send2trash.send2trash(s.get("_gz_tmp_name"))
+
+            # Erase the settings that we use to track ourselves.
+            s.erase("_gz_name")
+            s.erase("_gz_tmp_name")
+            s.erase("_gz_delete")
+            self.view.erase_status("gzipper")
 
     def on_post_save(self):
         archive_name = self.view.settings().get("_gz_name")
