@@ -4,6 +4,7 @@ import sublime_plugin
 import os
 import gzip
 import shutil
+import threading
 
 
 ###----------------------------------------------------------------------------
@@ -107,6 +108,101 @@ def remove_gzip_settings(view):
     settings.erase("_gz_name")
     settings.erase("_gz_delete")
     view.erase_status("gzipper")
+
+
+def spinner_key():
+    """
+    Get a unique spinner key for displaying a spinner in the status bar. This
+    needs to be thread safe.
+    """
+    with spinner_key.lock:
+        spinner_key.counter += 1
+        return "_gz_spinner_%d" % spinner_key.counter
+
+spinner_key.counter = 0
+spinner_key.lock = threading.Lock()
+
+
+###----------------------------------------------------------------------------
+
+
+class Spinner():
+    """
+    Implement a simple spinner. Given a window and a thread, this will display
+    an updating spinner in the status bar of that window, moving from view to
+    view as the current view changes. When the thread stops running, the
+    spinner automatically removes itself.
+    """
+    spin_characters = "|/-\\"
+
+    def __init__(self, window, thread, text):
+        self.window = window
+        self.thread = thread
+        self.text = text
+        self.key = spinner_key()
+        self.view = None
+
+        sublime.set_timeout(lambda: self.tick(0), 250)
+
+    def tick(self, position):
+        current_view = self.window.active_view()
+
+        if self.view is not None and current_view != self.view:
+            self.view.erase_status(self.key)
+            self.view = None
+
+        if not self.thread.is_alive():
+            return current_view.erase_status(self.key)
+
+        text = "%s [%s]" % (self.text, self.spin_characters[position])
+        position = (position + 1) % len(self.spin_characters)
+
+        current_view.set_status(self.key, text)
+        if self.view is None:
+            self.view = current_view
+
+        sublime.set_timeout(lambda: self.tick(position), 250)
+
+
+###----------------------------------------------------------------------------
+
+
+class WorkerThread(threading.Thread):
+    """
+    Perform work in the background, maintaining an active spinner to show that
+    the thread is running. The given callback will be invoked once the thread
+    has completed.
+
+    This is meant to be a base class for background work, abstracting away the
+    work of maintaining the spinner and
+    """
+    def __init__(self, window, spin_text, callback, **kwargs):
+        super().__init__()
+
+        self.window = window
+        self.spin_text = spin_text
+        self.callback = callback
+        self.args = kwargs
+
+        self.start()
+
+    def _process(self):
+        pass
+
+    def run(self):
+        Spinner(self.window, self, self.spin_text)
+
+        self._process(self.args)
+
+        if self.callback is not None:
+            # Hard learned lessons; If we don't break this link, our thread
+            # will dangle forever because it's holding a reference to the
+            # callback and the callback is holding a reference to the thread.
+            callback = self.callback
+            del self.callback
+
+            # Trigger the callback in the main Sublime thread
+            sublime.set_timeout(lambda: callback(self), 0)
 
 
 ###----------------------------------------------------------------------------
