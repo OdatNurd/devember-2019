@@ -208,6 +208,30 @@ class WorkerThread(threading.Thread):
 ###----------------------------------------------------------------------------
 
 
+class GzipThread(WorkerThread):
+    """
+    Perform a gzip operation in a background thread so that large files don't
+    block the user interface.
+    """
+    def _process(self, args):
+        gzip_file(args["from_path"], args["to_path"])
+
+
+###----------------------------------------------------------------------------
+
+
+class GunzipThread(WorkerThread):
+    """
+    Perform a gunzip operation in a background thread so that large files
+    don't block the user interface.
+    """
+    def _process(self, args):
+        gunzip_file(args["from_path"], args["to_path"])
+
+
+###----------------------------------------------------------------------------
+
+
 class ReopenAsGzipCommand(sublime_plugin.TextCommand):
     """
     For a view that is a gzipped file, this will open up a new view that is
@@ -228,16 +252,18 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         # TODO: This will clobber files; maybe put the file in TMP or such?
         new_name = os.path.join(path, name + "_ungz" + ext)
 
+        def on_done(thread):
+            # Open the uncompressed file and tell it what gzipped file it's
+            # tracking.
+            gzView = self.view.window().open_file(new_name)
+            apply_gzip_settings(gzView, new_name, org_name, delete_on_close=True)
+
+            # Close our view now
+            self.view.close()
+
         # Uncompress the file into the buffer now.
-        gunzip_file(org_name, new_name)
-
-        # Open the uncompressed file and tell it what gzipped file it's
-        # tracking.
-        gzView = self.view.window().open_file(new_name)
-        apply_gzip_settings(gzView, new_name, org_name, delete_on_close=True)
-
-        # Close our view now
-        self.view.close()
+        GunzipThread(self.view.window(), "Unzipping", on_done,
+                     from_path=org_name, to_path=new_name)
 
 
     def is_enabled(self):
@@ -259,12 +285,16 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
     def run(self, edit, only_compress=False, delete_on_close=False):
         current_name = self.view.file_name()
         gzip_name = current_name + ".gz"
-        gzip_file(current_name, gzip_name)
 
-        if only_compress:
-            return
+        def on_done(thread):
+            if only_compress:
+                return
 
-        apply_gzip_settings(self.view, current_name, gzip_name, delete_on_close)
+            apply_gzip_settings(self.view, current_name, gzip_name, delete_on_close)
+
+        GzipThread(self.view.window(), "Zipping", on_done,
+                   from_path=current_name, to_path=gzip_name)
+
 
     def is_enabled(self, only_compress=False, delete_on_close=False):
         return not is_gzip_file(self.view)
@@ -300,12 +330,16 @@ class GzipFileListener(sublime_plugin.ViewEventListener):
 
     def on_post_save(self):
         archive_name = self.view.settings().get("_gz_name")
-        gzip_file(self.view.file_name(), archive_name)
 
-        # Show a status message after the command exits, so we can override
-        # the default save message.
-        sublime.set_timeout(lambda: self.view.window().status_message(
-            "Compressed %s" % home_relative_path(archive_name)))
+        def on_done(thread):
+            # Show a status message after the command exits, so we can override
+            # the default save message.
+            sublime.set_timeout(lambda: self.view.window().status_message(
+                "Compressed %s" % home_relative_path(archive_name)))
+
+        GzipThread(self.view.window(), "Zipping", on_done,
+                   from_path=self.view.file_name(), to_path=archive_name)
+
 
 
 ###----------------------------------------------------------------------------
