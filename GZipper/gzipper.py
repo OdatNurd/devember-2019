@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 
 import os
+import tempfile
 import gzip
 import shutil
 import threading
@@ -64,11 +65,23 @@ def gzip_file(from_path, to_path):
 
 def gunzip_file(from_path, to_path):
     """
-    Uncompress a file on disk to the file named.
+    Uncompress a file on disk to the file named. If to_path is not provided, a
+    new temporary file based on the from_path will be used instead.
+
+    The name of the file that was gzipped to will be returned; this may be the
+    same as the input.
     """
+    handle = None
+    if to_path is None:
+        _, file = os.path.split(from_path)
+        root, ext = os.path.splitext(os.path.splitext(file)[0])
+        handle, to_path = tempfile.mkstemp(ext, root + "_")
+
     with gzip.open(from_path, 'rb') as infile:
-        with open(to_path, 'wb') as outfile:
+        with open(handle, 'wb') as outfile:
             shutil.copyfileobj(infile, outfile)
+
+    return to_path
 
 
 def trash_file(filename):
@@ -226,7 +239,7 @@ class GunzipThread(WorkerThread):
     don't block the user interface.
     """
     def _process(self, args):
-        gunzip_file(args["from_path"], args["to_path"])
+        args["to_path"] = gunzip_file(args["from_path"], args["to_path"])
 
 
 ###----------------------------------------------------------------------------
@@ -242,17 +255,10 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
         # Save the current file name so that we can recreate this file later.
         org_name = self.view.file_name()
 
-        # From the name of the file, get the path and underlying file name; to
-        # do that here we just throw the .gz off the end of the filename.
-        path, file = os.path.split(org_name)
-        name, ext = os.path.splitext(os.path.splitext(file)[0])
-
-        # Create a new filename to store the uncompressed output.
-        #
-        # TODO: This will clobber files; maybe put the file in TMP or such?
-        new_name = os.path.join(path, name + "_ungz" + ext)
-
         def on_done(thread):
+            # Get the name the other end used.
+            new_name = thread.args["to_path"]
+
             # Open the uncompressed file and tell it what gzipped file it's
             # tracking.
             gzView = self.view.window().open_file(new_name)
@@ -261,9 +267,10 @@ class ReopenAsGzipCommand(sublime_plugin.TextCommand):
             # Close our view now
             self.view.close()
 
-        # Uncompress the file into the buffer now.
+        # Uncompress the file into the buffer now; provide None as the output
+        # so a new temporary file gets created.
         GunzipThread(self.view.window(), "Unzipping", on_done,
-                     from_path=org_name, to_path=new_name)
+                     from_path=org_name, to_path=None)
 
 
     def is_enabled(self):
