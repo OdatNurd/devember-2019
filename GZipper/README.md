@@ -47,3 +47,8 @@ This package provides the following settings:
   when writing the output file. This value can range from 0 to 9, where 0 is
   no compression and 9 is maximum compression. Compression takes longer at
   higher settings.
+
+  * `delete_on_trash_faile` (default: false) controls what should happen when
+  you close a temporary file and GZipper cannot move it to the trash. When this
+  is `false`, the temporary file is left in place; setting this to `true` will
+  ***permanently delete*** the temporary file.

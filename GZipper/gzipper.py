@@ -19,6 +19,7 @@ def plugin_loaded():
     gz_setting.default = {
         "unzip_on_load": True,
         "compression_level": 9,
+        "delete_on_trash_fail": False
     }
 
 
@@ -91,7 +92,18 @@ def trash_file(filename):
     # Import send2trash on demand; see Default/side_bar.py.
     import Default.send2trash as send2trash
 
-    send2trash.send2trash(filename)
+    # send2trash tries to put files in a Trash folder on the same partition
+    # as where the file came from (so it can simply move the file there). If
+    # the temporary file location is on a different partition this can fail
+    # due to permissions errors; in that case just remove the file (but we
+    # should do better).
+    try:
+        send2trash.send2trash(filename)
+    except:
+        if gz_setting("delete_on_trash_fail"):
+            os.remove(filename)
+        else:
+            sublime.status_message("GZipper: Unable to trash temporary file")
 
 
 def apply_gzip_settings(view, temp_name, gzip_name, delete_on_close):
