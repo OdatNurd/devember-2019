@@ -304,9 +304,21 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
     For a view that is not currently a gzipped file, create a compressed
     version of the file on disk,
     """
-    def run(self, edit, only_compress=False, delete_on_close=False):
+    def run(self, edit, only_compress=False, delete_on_close=False, force=False):
         current_name = self.view.file_name()
         gzip_name = current_name + ".gz"
+
+        # If the output file exists, verify if we should clobber it
+        if os.path.exists(gzip_name) and not force:
+            msg = "%s\n\nFile already exists; overwrite it?" % gzip_name
+            if sublime.yes_no_cancel_dialog(msg) == sublime.DIALOG_YES:
+                self.view.run_command("gzip_compress", {
+                    "only_compress": only_compress,
+                    "delete_on_close": delete_on_close,
+                    "force": True
+                })
+
+            return
 
         def on_done(thread):
             if only_compress:
@@ -318,7 +330,7 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
                    from_path=current_name, to_path=gzip_name)
 
 
-    def is_enabled(self, only_compress=False, delete_on_close=False):
+    def is_enabled(self, only_compress=False, delete_on_close=False, force=False):
         return not is_gzip_file(self.view) and self.view.file_name() is not None
 
 
