@@ -319,7 +319,7 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
 
 
     def is_enabled(self, only_compress=False, delete_on_close=False):
-        return not is_gzip_file(self.view)
+        return not is_gzip_file(self.view) and self.view.file_name() is not None
 
 
 ###----------------------------------------------------------------------------
