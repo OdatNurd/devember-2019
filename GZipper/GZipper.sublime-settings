@@ -12,17 +12,23 @@
     // A value of 0 turns off compression entirely.
     "compression_level": 9,
 
-    // When editing a gzipped file, GZipper creates a temporary file in the
-    // system root, and then moves that file to the trash when you close the
-    // file.
+    // When editing a gzipped file, GZipper creates a temporary file for you to
+    // edit, and recompresses when you save. This setting controls what happens
+    // to the temporary file when you close it.
     //
-    // Should the trash operation fail, this setting controls whether the file
-    // should be permanently deleted or left in place. When this value is false,
-    // the file is left in place and a message will be displayed in the status
-    // bar.
+    // When this setting is true, the file is placed into the system trash
+    // folder, so that you can potentially retreive it if desired. When it is
+    // false, GZipper just deletes the file instead.
+    "trash_temp_on_close": true,
+
+    // When trash_temp_on_close is true, this controls what happens if the
+    // operation to put the file in the trash fails. A value of false causes
+    // the temporary file to be left in place for you to manually clean up. Set
+    // this to true to delete the file normally (i.e. not to the trash) if the
+    // trash operation failes.
     //
-    // When true, the file will be permanently deleted if the trash fails, so
-    // USE THIS WITH CAUTION if you want to keep the temporary files around
-    // (e.g. for backup reasons).
+    // This is only used in situations where sending a file to the trash could
+    // fail, such as on Linux in cases where the underlying send2trash library
+    // tries to use a trash folder in a location you don't have access to.
     "delete_on_trash_fail": false
 }
