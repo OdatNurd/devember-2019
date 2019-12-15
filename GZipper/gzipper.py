@@ -338,6 +338,47 @@ class GzipCompressCommand(sublime_plugin.TextCommand):
 ###----------------------------------------------------------------------------
 
 
+class GzipRemoveArchiveCommand(sublime_plugin.TextCommand):
+    """
+    Remove the underlying gzip archive for a file and (if asked to) the
+    temporary file being used to edit it as well. This could be used to decide
+    that you no longer want an archive that you created (from a non-gzip file)
+    or to get rid of a gzip file as well as the temporary file.
+    """
+    def run(self, edit, remove_temp=False, force=False):
+        if not force:
+            msg = "This will remove the gzip file%s\n\nAre you sure?" % (
+                " and this temporary file" if remove_temp else "")
+            if sublime.yes_no_cancel_dialog(msg) == sublime.DIALOG_YES:
+                return self.view.run_command("gzip_remove_archive", {
+                    "remove_temp": remove_temp,
+                    "force": True
+                })
+
+            return
+
+
+        gzip_name = self.view.settings().get("_gz_name")
+        trash_file(gzip_name)
+
+        if remove_temp:
+            trash_file(self.view.file_name())
+            if gz_setting("close_temp_on_delete"):
+                self.view.set_scratch(True)
+                self.view.close()
+                return
+
+        # Temporary file was not removed, or it was but it was left open; break
+        # the connection to the now-missing file.
+        remove_gzip_settings(self.view)
+
+    def is_enabled(self, remove_temp=False, force=False):
+        return self.view.settings().has("_gz_name")
+
+
+###----------------------------------------------------------------------------
+
+
 class GzipFileListener(sublime_plugin.ViewEventListener):
     """
     Event listener exclusively for Gzipped file instances; every time a file

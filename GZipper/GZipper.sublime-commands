@@ -4,6 +4,9 @@
     { "caption": "GZipper: Create Compressed Version", "command": "gzip_compress", "args": {"only_compress": true}},
     { "caption": "GZipper: Convert to Gzip", "command": "gzip_compress", "args": {"only_compress": false, "delete_on_close": true}},
 
+    { "caption": "GZipper: Delete Gzip File", "command": "gzip_remove_archive", "args": {"remove_temp": true }},
+    { "caption": "GZipper: Delete Gzip File (leave temporary behind)", "command": "gzip_remove_archive" },
+
     {
         "caption": "GZipper: Open Readme",
         "command": "open_file",
