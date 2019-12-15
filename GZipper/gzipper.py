@@ -20,7 +20,8 @@ def plugin_loaded():
         "unzip_on_load": True,
         "compression_level": 9,
         "trash_temp_on_close": True,
-        "delete_on_trash_fail": False
+        "delete_on_trash_fail": False,
+        "close_temp_on_delete": False
     }
 
 

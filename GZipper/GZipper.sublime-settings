@@ -30,5 +30,16 @@
     // This is only used in situations where sending a file to the trash could
     // fail, such as on Linux in cases where the underlying send2trash library
     // tries to use a trash folder in a location you don't have access to.
-    "delete_on_trash_fail": false
+    "delete_on_trash_fail": false,
+
+    // When using the command to delete a gzip file and its temporary file, this
+    // setting controls whether the tempoary buffer will remain open after the
+    // delete.
+    //
+    // When this setting is false, the underlying temporary file will be deleted
+    // but the buffer will remain, which allows you to see the content and
+    // recover by saving the file.
+    //
+    // Setting this to true will force the buffer to close after the delete.
+    "close_temp_on_delete": false,
 }
