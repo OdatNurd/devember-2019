@@ -48,7 +48,20 @@ This package provides the following settings:
   no compression and 9 is maximum compression. Compression takes longer at
   higher settings.
 
+  * `trash_temp_on_close` (default: true) controls what should happen to the
+  temporary file used while editing a `gzipped` file when you close it. The
+  default value will put the temporary file in the trash; set it to `false` to
+  permanently delete the file instead (e.g. if you don't want a backup just
+  in case).
+
   * `delete_on_trash_faile` (default: false) controls what should happen when
-  you close a temporary file and GZipper cannot move it to the trash. When this
-  is `false`, the temporary file is left in place; setting this to `true` will
-  ***permanently delete*** the temporary file.
+  an attempt to trash a temporary file fails. When this is `false`, the
+  temporary file is left in place; setting this to `true` will ***permanently
+  delete*** the temporary file, as if `trash_temp_on_close` was `false`.
+
+  * `close_temp_on_delete` (default: false) controls what happens to the
+  temporary file buffer used to edit a gzipped file when you use the command
+  that deletes the `gzip` file and also select to delete the temporary file as
+  well. When this is `false`, the tab is left open after the file is deleted,
+  allowing you to see the content and revive the file by saving it. Set this
+  to `true` to close the tab when this happens.
