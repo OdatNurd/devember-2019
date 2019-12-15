@@ -33,6 +33,12 @@ in which case you need to manually trigger the command instead.
   every time you save the file, the compressed version will change. When you
   close the file, the original file will be deleted.
 
+  * `GZipper: Delete Gzip File` will delete the underlying `gzip` file and also
+  the temporary file being used to edit. You will be asked to confirm the
+  decision prior to removing the file. A variant of the command will leave the
+  temporary file in place after the `gzip` is deleted, which you can use to
+  continue working with the file.
+
 
 ## Settings
 -----------
