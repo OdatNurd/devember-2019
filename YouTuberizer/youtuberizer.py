@@ -186,15 +186,16 @@ class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
             for playlist_item in playlistitems_list_response['items']:
                 title = playlist_item['snippet']['title']
                 video_id = playlist_item['snippet']['resourceId']['videoId']
-                results.append("%s (%s)" % (title, video_id))
+                results.append([title, 'https://youtu.be/%s' % video_id])
 
             playlistitems_list_request = self.youtube.playlistItems().list_next(
                 playlistitems_list_request, playlistitems_list_response)
 
+        results = list(sorted(results))
         window = sublime.active_window()
-        view = window.new_file()
-        view.set_name("Videos in PlayList %s" % playlist_id)
-        view.set_scratch(True)
+        window.show_quick_panel(results, lambda idx: self.select_video(results[idx]))
 
-        view.run_command("append", {"characters": "\n".join(sorted(results)) })
+    def select_video(self, video):
+        sublime.set_clipboard(video[1])
+        sublime.status_message('URL Copied: %s' % video[0] )
 
