@@ -141,9 +141,9 @@ class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
             if uploads_playlist_id:
                 self.get_playlist_contents(uploads_playlist_id)
             else:
-                print('There is no uploaded videos playlist for this user.')
+                sublime.message_dialog("There are no uploaded videos to display")
         except HttpError as e:
-            print('An HTTP error %d occurred:\n%s' % (e.resp.status, e.content))
+            sublime.error_message("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
 
 
     def get_uploads_playlist(self):
@@ -175,10 +175,10 @@ class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
         playlistitems_list_request = self.youtube.playlistItems().list(
             playlistId=playlist_id,
             part='snippet',
-            maxResults=5
+            maxResults=20
         )
 
-        print('Videos in list %s' % playlist_id)
+        results = []
         while playlistitems_list_request:
             playlistitems_list_response = playlistitems_list_request.execute()
 
@@ -186,8 +186,15 @@ class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
             for playlist_item in playlistitems_list_response['items']:
                 title = playlist_item['snippet']['title']
                 video_id = playlist_item['snippet']['resourceId']['videoId']
-                print('%s (%s)' % (title, video_id))
+                results.append("%s (%s)" % (title, video_id))
 
             playlistitems_list_request = self.youtube.playlistItems().list_next(
                 playlistitems_list_request, playlistitems_list_response)
+
+        window = sublime.active_window()
+        view = window.new_file()
+        view.set_name("Videos in PlayList %s" % playlist_id)
+        view.set_scratch(True)
+
+        view.run_command("append", {"characters": "\n".join(sorted(results)) })
 
