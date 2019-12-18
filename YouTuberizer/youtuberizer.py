@@ -10,6 +10,7 @@ import sublime_plugin
 import argparse
 import os
 import re
+import json
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -43,14 +44,72 @@ def plugin_loaded():
     CLIENT_SECRETS_FILE = CLIENT_SECRETS_FILE.format(packages=sublime.packages_path())
 
 
+def get_secrets_file():
+    """
+    Load the client secrets file and return it back; this will currently raise
+    an exception if the file is broken (so don't break it).
+
+    This loads the file as a resource, not from the global variable (which is
+    still in place for the standard library calls until we fix things.)
+    """
+    return sublime.decode_value(sublime.load_resource("Packages/YouTuberizer/client_id.json"))
+
+
+def cache_credentials(credentials):
+    """
+    Given a credentials object, cache the given credentials into a file in the
+    Cache directory for later use.
+    """
+    cache_data = {
+        "token": credentials.token,
+        "refresh_token": credentials.refresh_token,
+        "id_token": credentials.id_token
+    }
+
+    cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizerCredentials.json")
+    with open(os.path.normpath(cache_path), "wt") as handle:
+        handle.write(json.dumps(cache_data, indent=4))
+
+
+def get_cached_credentials():
+    """
+    Fetch the cached credentials from a previous operation; this will return
+    None if there is currently no cached credentials. This will currently
+    raise an exception if the file is broken (so don't break it).
+    """
+    secrets = get_secrets_file()
+    installed = secrets["installed"]
+
+    try:
+        cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizerCredentials.json")
+        with open(os.path.normpath(cache_path), "rt") as handle:
+            cached = json.loads(handle.read())
+    except FileNotFoundError:
+        return None
+
+    return google.oauth2.credentials.Credentials(
+        cached["token"],
+        cached["refresh_token"],
+        cached["id_token"],
+        secrets["installed"]["token_uri"],
+        secrets["installed"]["client_id"],
+        secrets["installed"]["client_secret"],
+        SCOPES
+        )
+
+
 # Authorize the request and store authorization credentials.
 def get_authenticated_service():
-  flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-  credentials = flow.run_local_server()
-  # credentials = flow.run_console()
+  credentials = get_cached_credentials()
+  if credentials is None or not credentials.valid:
+      flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+      credentials = flow.run_local_server(client_type="installed")
+
+      cache_credentials(credentials)
+
   return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
-def get_my_uploads_list():
+
   # Retrieve the contentDetails part of the channel resource for the
   # authenticated user's channel.
   channels_response = youtube.channels().list(
@@ -65,7 +124,7 @@ def get_my_uploads_list():
 
   return None
 
-def list_my_uploaded_videos(uploads_playlist_id):
+
   # Retrieve the list of videos uploaded to the authenticated user's channel.
   playlistitems_list_request = youtube.playlistItems().list(
     playlistId=uploads_playlist_id,
