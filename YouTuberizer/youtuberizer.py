@@ -1,15 +1,7 @@
 import sublime
 import sublime_plugin
 
-#!/usr/bin/python
-
-# Retrieve the authenticated user's uploaded videos.
-# Sample usage:
-# python my_uploads.py
-
-import argparse
 import os
-import re
 import json
 
 import google.oauth2.credentials
@@ -36,6 +28,7 @@ CLIENT_SECRETS_FILE = '{packages}/YouTuberizer/client_id.json'
 SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
+
 
 def plugin_loaded():
     # Update the location of the client secrets file since it's packed in our
@@ -100,50 +93,53 @@ def get_cached_credentials():
 
 # Authorize the request and store authorization credentials.
 def get_authenticated_service():
-  credentials = get_cached_credentials()
-  if credentials is None or not credentials.valid:
-      flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-      credentials = flow.run_local_server(client_type="installed")
+    credentials = get_cached_credentials()
+    if credentials is None or not credentials.valid:
+        flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+        credentials = flow.run_local_server(client_type="installed")
 
-      cache_credentials(credentials)
+        cache_credentials(credentials)
 
-  return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
-
-
-  # Retrieve the contentDetails part of the channel resource for the
-  # authenticated user's channel.
-  channels_response = youtube.channels().list(
-    mine=True,
-    part='contentDetails'
-  ).execute()
-
-  for channel in channels_response['items']:
-    # From the API response, extract the playlist ID that identifies the list
-    # of videos uploaded to the authenticated user's channel.
-    return channel['contentDetails']['relatedPlaylists']['uploads']
-
-  return None
+    return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 
-  # Retrieve the list of videos uploaded to the authenticated user's channel.
-  playlistitems_list_request = youtube.playlistItems().list(
-    playlistId=uploads_playlist_id,
-    part='snippet',
-    maxResults=5
-  )
+def get_my_uploads_list(youtube):
+    # Retrieve the contentDetails part of the channel resource for the
+    # authenticated user's channel.
+    channels_response = youtube.channels().list(
+        mine=True,
+        part='contentDetails'
+    ).execute()
 
-  print ('Videos in list %s' % uploads_playlist_id)
-  while playlistitems_list_request:
-    playlistitems_list_response = playlistitems_list_request.execute()
+    for channel in channels_response['items']:
+        # From the API response, extract the playlist ID that identifies the list
+        # of videos uploaded to the authenticated user's channel.
+        return channel['contentDetails']['relatedPlaylists']['uploads']
 
-    # Print information about each video.
-    for playlist_item in playlistitems_list_response['items']:
-      title = playlist_item['snippet']['title']
-      video_id = playlist_item['snippet']['resourceId']['videoId']
-      print ('%s (%s)' % (title, video_id))
+    return None
 
-    playlistitems_list_request = youtube.playlistItems().list_next(
-      playlistitems_list_request, playlistitems_list_response)
+
+def list_my_uploaded_videos(youtube, uploads_playlist_id):
+    # Retrieve the list of videos uploaded to the authenticated user's channel.
+    playlistitems_list_request = youtube.playlistItems().list(
+        playlistId=uploads_playlist_id,
+        part='snippet',
+        maxResults=5
+    )
+
+    print ('Videos in list %s' % uploads_playlist_id)
+    while playlistitems_list_request:
+        playlistitems_list_response = playlistitems_list_request.execute()
+
+        # Print information about each video.
+        for playlist_item in playlistitems_list_response['items']:
+            title = playlist_item['snippet']['title']
+            video_id = playlist_item['snippet']['resourceId']['videoId']
+            print ('%s (%s)' % (title, video_id))
+
+        playlistitems_list_request = youtube.playlistItems().list_next(
+            playlistitems_list_request, playlistitems_list_response)
+
 
 if __name__ == '__main__':
   youtube = get_authenticated_service()
