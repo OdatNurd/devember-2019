@@ -28,13 +28,20 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 #   https://developers.google.com/youtube/v3/guides/authentication
 # For more information about the client_secrets.json file format, see:
 #   https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-CLIENT_SECRETS_FILE = '/home/tmartin/local/src/devember-2019/YouTuberizer/client_id.json'
+CLIENT_SECRETS_FILE = '{packages}/YouTuberizer/client_id.json'
 
 # This OAuth 2.0 access scope allows for read-only access to the authenticated
 # user's account, but not other types of account access.
 SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
+
+def plugin_loaded():
+    # Update the location of the client secrets file since it's packed in our
+    # package.
+    global CLIENT_SECRETS_FILE
+    CLIENT_SECRETS_FILE = CLIENT_SECRETS_FILE.format(packages=sublime.packages_path())
+
 
 # Authorize the request and store authorization credentials.
 def get_authenticated_service():

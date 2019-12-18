@@ -1,3 +1,2 @@
 # Specify filepatterns you want git to ignore.
 *.sublime-workspace
-client_id.json
