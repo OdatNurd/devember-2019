@@ -93,6 +93,17 @@ def get_cached_credentials():
 
 # Authorize the request and store authorization credentials.
 def get_authenticated_service():
+    """
+    This builds the appropriate endpoint object to talk to the YouTube data
+    API, using a combination of the client secrets file and either cached
+    credentials or asking the user to log in first.
+
+    If there is no cached credentials, or if they are not valid, then the user
+    is asked to log in again before this returns.
+
+    The result is an object that can be used to make requests to the API.
+    This fetches the authenticated service for use
+    """
     credentials = get_cached_credentials()
     if credentials is None or not credentials.valid:
         flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
@@ -103,51 +114,80 @@ def get_authenticated_service():
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 
-def get_my_uploads_list(youtube):
-    # Retrieve the contentDetails part of the channel resource for the
-    # authenticated user's channel.
-    channels_response = youtube.channels().list(
-        mine=True,
-        part='contentDetails'
-    ).execute()
+class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
+    # The cached object for talking to YouTube; when this is None, the command
+    # will load credentials (and possibly prompt the user to log into YouTube)
+    # before continuing.
+    youtube = None
 
-    for channel in channels_response['items']:
-        # From the API response, extract the playlist ID that identifies the list
-        # of videos uploaded to the authenticated user's channel.
-        return channel['contentDetails']['relatedPlaylists']['uploads']
+    """
+    Generate a list of videos for a user's YouTube channel into a new view
+    in the currently active window. This will use cached credentials if there
+    are any, and ask the user to log in if not.
+    """
+    def run(self):
+        # This operation might need to block, so use the async thread to run
+        # it, which is awful and terrible in many ways, but good enough until
+        # we know enough about this whole process to be able to decide on an
+        # appropriate structure.
+        sublime.set_timeout_async(lambda: self.dirty_hack())
 
-    return None
+    def dirty_hack(self):
+        if self.youtube == None:
+            self.youtube = get_authenticated_service()
 
-
-def list_my_uploaded_videos(youtube, uploads_playlist_id):
-    # Retrieve the list of videos uploaded to the authenticated user's channel.
-    playlistitems_list_request = youtube.playlistItems().list(
-        playlistId=uploads_playlist_id,
-        part='snippet',
-        maxResults=5
-    )
-
-    print ('Videos in list %s' % uploads_playlist_id)
-    while playlistitems_list_request:
-        playlistitems_list_response = playlistitems_list_request.execute()
-
-        # Print information about each video.
-        for playlist_item in playlistitems_list_response['items']:
-            title = playlist_item['snippet']['title']
-            video_id = playlist_item['snippet']['resourceId']['videoId']
-            print ('%s (%s)' % (title, video_id))
-
-        playlistitems_list_request = youtube.playlistItems().list_next(
-            playlistitems_list_request, playlistitems_list_response)
+        try:
+            uploads_playlist_id = self.get_uploads_playlist()
+            if uploads_playlist_id:
+                self.get_playlist_contents(uploads_playlist_id)
+            else:
+                print('There is no uploaded videos playlist for this user.')
+        except HttpError as e:
+            print('An HTTP error %d occurred:\n%s' % (e.resp.status, e.content))
 
 
-if __name__ == '__main__':
-  youtube = get_authenticated_service()
-  try:
-    uploads_playlist_id = get_my_uploads_list()
-    if uploads_playlist_id:
-      list_my_uploaded_videos(uploads_playlist_id)
-    else:
-      print('There is no uploaded videos playlist for this user.')
-  except HttpError as e:
-    print ('An HTTP error %d occurred:\n%s' % (e.resp.status, e.content))
+    def get_uploads_playlist(self):
+        """
+        Retreive the playlist ID for the uploaded videos of the user that is
+        currently logged in
+
+        This can return None if there are no videos.
+        """
+
+        channels_response = self.youtube.channels().list(
+            mine=True,
+            part='contentDetails'
+        ).execute()
+
+        # From the API response, extract the playlist ID that identifies the
+        # list of videos uploaded to the authenticated user's channel.
+        for channel in channels_response['items']:
+            return channel['contentDetails']['relatedPlaylists']['uploads']
+
+        return None
+
+
+    def get_playlist_contents(self, playlist_id):
+        """
+        Given the ID of a playlsit for a user, fetch the contents of that
+        playlist.
+        """
+        playlistitems_list_request = self.youtube.playlistItems().list(
+            playlistId=playlist_id,
+            part='snippet',
+            maxResults=5
+        )
+
+        print('Videos in list %s' % playlist_id)
+        while playlistitems_list_request:
+            playlistitems_list_response = playlistitems_list_request.execute()
+
+            # Print information about each video.
+            for playlist_item in playlistitems_list_response['items']:
+                title = playlist_item['snippet']['title']
+                video_id = playlist_item['snippet']['resourceId']['videoId']
+                print('%s (%s)' % (title, video_id))
+
+            playlistitems_list_request = self.youtube.playlistItems().list_next(
+                playlistitems_list_request, playlistitems_list_response)
+
