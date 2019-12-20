@@ -17,17 +17,25 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 
-# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
-# the OAuth 2.0 information for this application, including its client_id and
-# client_secret. You can acquire an OAuth 2.0 client ID and client secret from
-# the {{ Google Cloud Console }} at
-# {{ https://cloud.google.com/console }}.
-# Please ensure that you have enabled the YouTube Data API for your project.
-# For more information about using OAuth2 to access the YouTube Data API, see:
-#   https://developers.google.com/youtube/v3/guides/authentication
-# For more information about the client_secrets.json file format, see:
-#   https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-CLIENT_SECRETS_FILE = '{packages}/YouTuberizer/client_id.json'
+# The configuration information for our application; the values here are taken
+# from the Google Application Console.
+#
+# Note that the client_secret is (as far as I can gather) not supposed to be
+# used in this flow because there's no way to keep it a secret. However, the
+# underlying library requires it to be there, and so does the Google endpoint.
+#
+# Basically everything I know is a lie, or there is some magic that I don't
+# understand that somehow stops another application from masquerading as us
+# because I don't see how you could possibly keep this informationa secret.
+CLIENT_CONFIG = {
+    "installed":{
+        "client_id":"771245933356-mlq371ev2shqmv757uf24c009j4bv17q.apps.googleusercontent.com",
+        "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+        "token_uri":"https://oauth2.googleapis.com/token",
+        "client_secret":"v9GXqmgwHXssHuj8yKS3JXQa",
+    }
+}
+
 
 # This OAuth 2.0 access scope allows for read-only access to the authenticated
 # user's account, but not other types of account access.
@@ -41,24 +49,6 @@ _PBKDF_Salt = "YouTuberizerSaltValue".encode()
 # The encoded password; later the user will be prompted for this on the fly,
 # but for expediency in testing the password is currently hard coded.
 _PBKDF_Key = scrypt("password".encode(), _PBKDF_Salt, 1024, 1, 1, 32)
-
-
-def plugin_loaded():
-    # Update the location of the client secrets file since it's packed in our
-    # package.
-    global CLIENT_SECRETS_FILE
-    CLIENT_SECRETS_FILE = CLIENT_SECRETS_FILE.format(packages=sublime.packages_path())
-
-
-def get_secrets_file():
-    """
-    Load the client secrets file and return it back; this will currently raise
-    an exception if the file is broken (so don't break it).
-
-    This loads the file as a resource, not from the global variable (which is
-    still in place for the standard library calls until we fix things.)
-    """
-    return sublime.decode_value(sublime.load_resource("Packages/YouTuberizer/client_id.json"))
 
 
 def cache_credentials(credentials):
@@ -87,9 +77,6 @@ def get_cached_credentials():
     None if there is currently no cached credentials. This will currently
     raise an exception if the file is broken (so don't break it).
     """
-    secrets = get_secrets_file()
-    installed = secrets["installed"]
-
     try:
         cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
         with open(os.path.normpath(cache_path), "rb") as handle:
@@ -105,10 +92,10 @@ def get_cached_credentials():
     return google.oauth2.credentials.Credentials(
         cached["token"],
         cached["refresh_token"],
-        secrets["installed"]["token_uri"],
-        secrets["installed"]["client_id"],
+        CLIENT_CONFIG["installed"]["token_uri"],
+        CLIENT_CONFIG["installed"]["client_id"],
         SCOPES
-        )
+    )
 
 
 # Authorize the request and store authorization credentials.
@@ -126,8 +113,10 @@ def get_authenticated_service():
     """
     credentials = get_cached_credentials()
     if credentials is None or not credentials.valid:
-        flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-        credentials = flow.run_local_server(client_type="installed")
+        flow = InstalledAppFlow.from_client_config(CLIENT_CONFIG, SCOPES)
+        credentials = flow.run_local_server(client_type="installed",
+            authorization_prompt_message='YouTuberizer: Launching browser to log in',
+            success_message='YouTuberizer login complete! You can close this window.')
 
         cache_credentials(credentials)
 
