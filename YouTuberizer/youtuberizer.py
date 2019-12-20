@@ -17,6 +17,9 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 
+###----------------------------------------------------------------------------
+
+
 # The configuration information for our application; the values here are taken
 # from the Google Application Console.
 #
@@ -51,6 +54,24 @@ _PBKDF_Salt = "YouTuberizerSaltValue".encode()
 _PBKDF_Key = scrypt("password".encode(), _PBKDF_Salt, 1024, 1, 1, 32)
 
 
+###----------------------------------------------------------------------------
+
+
+def stored_credentials_path():
+    """
+    Obtain the cached credentials path, which is stored in the Cache folder of
+    the User's configuration information.
+
+    """
+    if hasattr(stored_credentials_path, "path"):
+        return stored_credentials_path.path
+
+    path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
+    stored_credentials_path.path = os.path.normpath(path)
+
+    return stored_credentials_path.path
+
+
 def cache_credentials(credentials):
     """
     Given a credentials object, cache the given credentials into a file in the
@@ -61,13 +82,11 @@ def cache_credentials(credentials):
         "refresh_token": credentials.refresh_token
     }
 
-    cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
-
     # Encrypt the cache data using our key and write it out as bytes.
     aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
     cache_data = aes.encrypt(json.dumps(cache_data, indent=4))
 
-    with open(os.path.normpath(cache_path), "wb") as handle:
+    with open(stored_credentials_path(), "wb") as handle:
         handle.write(cache_data)
 
 
@@ -78,9 +97,8 @@ def get_cached_credentials():
     raise an exception if the file is broken (so don't break it).
     """
     try:
-        cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
-        with open(os.path.normpath(cache_path), "rb") as handle:
-            # Decrypt the data with the key and convert it back to JSON.
+        # Decrypt the data with the key and convert it back to JSON.
+        with open(stored_credentials_path(), "rb") as handle:
             aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
             cache_data = aes.decrypt(handle.read()).decode("utf-8")
 
@@ -113,6 +131,7 @@ def get_authenticated_service():
     """
     credentials = get_cached_credentials()
     if credentials is None or not credentials.valid:
+        # TODO: This can raise exceptions, AccessDeniedError
         flow = InstalledAppFlow.from_client_config(CLIENT_CONFIG, SCOPES)
         credentials = flow.run_local_server(client_type="installed",
             authorization_prompt_message='YouTuberizer: Launching browser to log in',
@@ -123,17 +142,51 @@ def get_authenticated_service():
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 
-class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
-    # The cached object for talking to YouTube; when this is None, the command
-    # will load credentials (and possibly prompt the user to log into YouTube)
-    # before continuing.
-    youtube = None
+###----------------------------------------------------------------------------
 
+
+class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
+    """
+    If there are any cached credentials for the user's YouTube account,
+    remove them. This will require that the user authenticate the app again
+    in order to continue using it.
+    """
+    def run(self, force=False):
+        if not force:
+            msg = "If you proceed, you will need to re-authenticate. Continue?"
+            if sublime.yes_no_cancel_dialog(msg) == sublime.DIALOG_YES:
+                sublime.run_command("youtuberizer_logout", {"force": True})
+
+            return
+
+        # TODO: This would actually need to remove the current YouTube object,
+        # but we're not our own thread yet. So this takes effect at the next
+        # reload/restart instead.
+        try:
+            os.remove(stored_credentials_path())
+            sublime.message_dialog("YouTuberizer credentials have been removed")
+
+        except:
+            pass
+
+    def is_enabled(self, force=False):
+        return os.path.isfile(stored_credentials_path())
+
+
+###----------------------------------------------------------------------------
+
+
+class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
     """
     Generate a list of videos for a user's YouTube channel into a new view
     in the currently active window. This will use cached credentials if there
     are any, and ask the user to log in if not.
     """
+    # The cached object for talking to YouTube; when this is None, the command
+    # will load credentials (and possibly prompt the user to log into YouTube)
+    # before continuing.
+    youtube = None
+
     def run(self):
         # This operation might need to block, so use the async thread to run
         # it, which is awful and terrible in many ways, but good enough until
@@ -208,3 +261,5 @@ class ListYoutubeVideosCommand(sublime_plugin.ApplicationCommand):
         sublime.set_clipboard(video[1])
         sublime.status_message('URL Copied: %s' % video[0] )
 
+
+###----------------------------------------------------------------------------
