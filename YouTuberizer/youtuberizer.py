@@ -68,8 +68,7 @@ def cache_credentials(credentials):
     """
     cache_data = {
         "token": credentials.token,
-        "refresh_token": credentials.refresh_token,
-        "id_token": credentials.id_token
+        "refresh_token": credentials.refresh_token
     }
 
     cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
@@ -106,10 +105,8 @@ def get_cached_credentials():
     return google.oauth2.credentials.Credentials(
         cached["token"],
         cached["refresh_token"],
-        cached["id_token"],
         secrets["installed"]["token_uri"],
         secrets["installed"]["client_id"],
-        secrets["installed"]["client_secret"],
         SCOPES
         )
 
