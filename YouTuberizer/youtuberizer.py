@@ -4,6 +4,12 @@ import sublime_plugin
 import os
 import json
 
+# A compatible version of this is available in hashlib in more recent builds of
+# Python, but it takes keyword only arguments. You can swap to that one by
+# modifying the call site as appropriate.
+from pyscrypt import hash as scrypt
+import pyaes
+
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
@@ -28,6 +34,13 @@ CLIENT_SECRETS_FILE = '{packages}/YouTuberizer/client_id.json'
 SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
+
+# The PBKDF Salt value; it needs to be in bytes.
+_PBKDF_Salt = "YouTuberizerSaltValue".encode()
+
+# The encoded password; later the user will be prompted for this on the fly,
+# but for expediency in testing the password is currently hard coded.
+_PBKDF_Key = scrypt("password".encode(), _PBKDF_Salt, 1024, 1, 1, 32)
 
 
 def plugin_loaded():
@@ -59,9 +72,14 @@ def cache_credentials(credentials):
         "id_token": credentials.id_token
     }
 
-    cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizerCredentials.json")
-    with open(os.path.normpath(cache_path), "wt") as handle:
-        handle.write(json.dumps(cache_data, indent=4))
+    cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
+
+    # Encrypt the cache data using our key and write it out as bytes.
+    aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
+    cache_data = aes.encrypt(json.dumps(cache_data, indent=4))
+
+    with open(os.path.normpath(cache_path), "wb") as handle:
+        handle.write(cache_data)
 
 
 def get_cached_credentials():
@@ -74,9 +92,14 @@ def get_cached_credentials():
     installed = secrets["installed"]
 
     try:
-        cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizerCredentials.json")
-        with open(os.path.normpath(cache_path), "rt") as handle:
-            cached = json.loads(handle.read())
+        cache_path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
+        with open(os.path.normpath(cache_path), "rb") as handle:
+            # Decrypt the data with the key and convert it back to JSON.
+            aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
+            cache_data = aes.decrypt(handle.read()).decode("utf-8")
+
+            cached = json.loads(cache_data)
+
     except FileNotFoundError:
         return None
 
