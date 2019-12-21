@@ -16,8 +16,14 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
+from .networking import NetworkManager, log
+
 
 ###----------------------------------------------------------------------------
+
+
+# Our global network manager object
+netManager = None
 
 
 # The configuration information for our application; the values here are taken
@@ -52,6 +58,27 @@ _PBKDF_Salt = "YouTuberizerSaltValue".encode()
 # The encoded password; later the user will be prompted for this on the fly,
 # but for expediency in testing the password is currently hard coded.
 _PBKDF_Key = scrypt("password".encode(), _PBKDF_Salt, 1024, 1, 1, 32)
+
+
+###----------------------------------------------------------------------------
+
+
+def plugin_loaded():
+    """
+    Initialize plugin state.
+    """
+    global netManager
+
+    netManager = NetworkManager()
+    netManager.startup()
+
+
+def plugin_unloaded():
+    global netManager
+
+    if netManager is not None:
+        netManager.shutdown()
+        netManager = None
 
 
 ###----------------------------------------------------------------------------
