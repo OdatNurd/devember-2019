@@ -203,6 +203,7 @@ class NetworkManager():
         self.request_queue = queue.Queue()
         self.net_thread = NetworkThread(self.thr_event, self.request_queue)
         self.authorized = False
+        self.cache = {}
 
     def startup(self):
         """
@@ -248,15 +249,25 @@ class NetworkManager():
         if request == "authorize":
             self.authorized = success
 
+        # Cache results on success
+        if success:
+            self.cache[request] = result
+
         user_callback(success, result)
 
-    def request(self, request, callback):
+    def request(self, request, callback, refresh=False):
         """
         Submit the given request to the network thread; the thread will execute
         the task and then invoke the callback once complete; the callback gets
         called with a boolean that indicates the success or failure, and either
         the error reason (on fail) or the result (on success).
+
+        Internally this class will cache the result of some requests; in order
+        to force a re-request, set refresh to True.
         """
+        if request == "authorize" and self.authorized and not refresh:
+            return callback(True, self.cache[request])
+
         self.request_queue.put({
             "request": request, 
             "callback": lambda s, r: self.callback(request, callback, s, r)
