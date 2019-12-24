@@ -81,7 +81,8 @@ class NetworkManager():
     """
     def __init__(self):
         self.thr_event = Event()
-        self.net_thread = NetworkThread(self.thr_event)
+        self.request_queue = queue.Queue()
+        self.net_thread = NetworkThread(self.thr_event, self.request_queue)
 
     def startup(self):
         """
@@ -110,6 +111,15 @@ class NetworkManager():
         """
         return os.path.isfile(stored_credentials_path())
 
+    def request(self, request, callback):
+        """
+        Submit the given request to the network thread; the thread will execute
+        the task and then invoke the callback once complete; the callback gets
+        called with a boolean that indicates the success or failure, and either
+        the error reason (on fail) or the result (on success).
+        """
+        self.request_queue.put({"request": request, "callback": callback})
+
 
 ###----------------------------------------------------------------------------
 
@@ -120,13 +130,35 @@ class NetworkThread(Thread):
     operations. All of the state is kept in this thread; requests are added in
     and callbacks are used to signal results out.
     """
-    def __init__(self, event):
+    def __init__(self, event, queue):
         # log("== Creating network thread")
         super().__init__()
         self.event = event
+        self.requests = queue
 
     # def __del__(self):
     #     log("== Destroying network thread")
+
+    def handle_request(self, request_obj):
+        """
+        Handle the asked for request, dispatching an appropriate callback when
+        the request is complete (depending on whether it worked or not).
+        """
+        request = request_obj["request"]
+        callback = request_obj["callback"]
+
+        success = True
+        result = None
+
+        try:
+            result = "The result goes here"
+
+        except Exception as err:
+            success = False
+            result = str(err)
+
+        sublime.set_timeout(lambda: callback(success, result))
+        self.requests.task_done()
 
     def run(self):
         """
@@ -140,7 +172,12 @@ class NetworkThread(Thread):
         """
         # log("== Entering network loop")
         while not self.event.is_set():
-            time.sleep(0.25)
+            try:
+                request = self.requests.get(block=True, timeout=0.25)
+                self.handle_request(request)
+
+            except queue.Empty:
+                pass
 
         log("network thread terminating")
 
