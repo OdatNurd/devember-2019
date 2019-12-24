@@ -4,6 +4,7 @@ import sublime_plugin
 from threading import Thread, Event, Lock
 import queue
 
+import os
 import time
 import textwrap
 
@@ -51,6 +52,21 @@ def log(msg, *args, dialog=False, error=False, panel=False, **kwargs):
         window.run_command("show_panel", {"panel": "output.youtuberizer"})
 
 
+def stored_credentials_path():
+    """
+    Obtain the cached credentials path, which is stored in the Cache folder of
+    the User's configuration information.
+
+    """
+    if hasattr(stored_credentials_path, "path"):
+        return stored_credentials_path.path
+
+    path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
+    stored_credentials_path.path = os.path.normpath(path)
+
+    return stored_credentials_path.path
+
+
 ###----------------------------------------------------------------------------
 
 
@@ -85,6 +101,14 @@ class NetworkManager():
         log("Shutting Down")
         self.thr_event.set()
         self.net_thread.join(0.25)
+
+    def has_credentials(self):
+        """
+        Returns an indication of whether or not there are currently stored
+        credentials for a YouTube login; this indicates that the user has
+        already authorized the application to access their account.
+        """
+        return os.path.isfile(stored_credentials_path())
 
 
 ###----------------------------------------------------------------------------

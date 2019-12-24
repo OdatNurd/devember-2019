@@ -16,7 +16,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from .networking import NetworkManager, log
+from .networking import NetworkManager, stored_credentials_path, log
 
 
 ###----------------------------------------------------------------------------
@@ -82,21 +82,6 @@ def plugin_unloaded():
 
 
 ###----------------------------------------------------------------------------
-
-
-def stored_credentials_path():
-    """
-    Obtain the cached credentials path, which is stored in the Cache folder of
-    the User's configuration information.
-
-    """
-    if hasattr(stored_credentials_path, "path"):
-        return stored_credentials_path.path
-
-    path = os.path.join(sublime.packages_path(), "..", "Cache", "YouTuberizer.credentials")
-    stored_credentials_path.path = os.path.normpath(path)
-
-    return stored_credentials_path.path
 
 
 def cache_credentials(credentials):
@@ -197,7 +182,7 @@ class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
             pass
 
     def is_enabled(self, force=False):
-        return os.path.isfile(stored_credentials_path())
+        return netManager.has_credentials()
 
 
 ###----------------------------------------------------------------------------
@@ -222,6 +207,7 @@ class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
         sublime.set_timeout_async(lambda: self.dirty_hack())
 
     def dirty_hack(self):
+        print("Running the dirty hack")
         if self.youtube == None:
             self.youtube = get_authenticated_service()
 
