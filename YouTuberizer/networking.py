@@ -202,6 +202,7 @@ class NetworkManager():
         self.thr_event = Event()
         self.request_queue = queue.Queue()
         self.net_thread = NetworkThread(self.thr_event, self.request_queue)
+        self.authorized = False
 
     def startup(self):
         """
@@ -230,6 +231,25 @@ class NetworkManager():
         """
         return os.path.isfile(stored_credentials_path())
 
+    def is_authorized(self):
+        """
+        Determine if the plugin is currently authorized or not; this
+        is an indication that data requests can be made; prior to this point
+        requests will fail.
+        """
+        return self.authorized
+
+    def callback(self, request, user_callback, success, result):
+        """
+        This callback is what is submitted to the network thread to invoke
+        when a result is delivered. We get the success and the result, as
+        well as the request that was made and the user callback.
+        """
+        if request == "authorize":
+            self.authorized = success
+
+        user_callback(success, result)
+
     def request(self, request, callback):
         """
         Submit the given request to the network thread; the thread will execute
@@ -237,7 +257,10 @@ class NetworkManager():
         called with a boolean that indicates the success or failure, and either
         the error reason (on fail) or the result (on success).
         """
-        self.request_queue.put({"request": request, "callback": callback})
+        self.request_queue.put({
+            "request": request, 
+            "callback": lambda s, r: self.callback(request, callback, s, r)
+        })
 
 
 ###----------------------------------------------------------------------------
