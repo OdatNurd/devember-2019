@@ -5,8 +5,57 @@ from threading import Thread, Event, Lock
 import queue
 
 import os
-import time
+import json
 import textwrap
+
+# A compatible version of this is available in hashlib in more recent builds of
+# Python, but it takes keyword only arguments. You can swap to that one by
+# modifying the call site as appropriate.
+from pyscrypt import hash as scrypt
+import pyaes
+
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from google_auth_oauthlib.flow import InstalledAppFlow
+
+
+###----------------------------------------------------------------------------
+
+
+# The configuration information for our application; the values here are taken
+# from the Google Application Console.
+#
+# Note that the client_secret is (as far as I can gather) not supposed to be
+# used in this flow because there's no way to keep it a secret. However, the
+# underlying library requires it to be there, and so does the Google endpoint.
+#
+# Basically everything I know is a lie, or there is some magic that I don't
+# understand that somehow stops another application from masquerading as us
+# because I don't see how you could possibly keep this informationa secret.
+CLIENT_CONFIG = {
+    "installed":{
+        "client_id":"771245933356-mlq371ev2shqmv757uf24c009j4bv17q.apps.googleusercontent.com",
+        "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+        "token_uri":"https://oauth2.googleapis.com/token",
+        "client_secret":"v9GXqmgwHXssHuj8yKS3JXQa",
+    }
+}
+
+
+# This OAuth 2.0 access scope allows for read-only access to the authenticated
+# user's account, but not other types of account access.
+SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
+API_SERVICE_NAME = 'youtube'
+API_VERSION = 'v3'
+
+# The PBKDF Salt value; it needs to be in bytes.
+_PBKDF_Salt = "YouTuberizerSaltValue".encode()
+
+# The encoded password; later the user will be prompted for this on the fly,
+# but for expediency in testing the password is currently hard coded.
+_PBKDF_Key = scrypt("password".encode(), _PBKDF_Salt, 1024, 1, 1, 32)
 
 
 ###----------------------------------------------------------------------------
@@ -65,6 +114,76 @@ def stored_credentials_path():
     stored_credentials_path.path = os.path.normpath(path)
 
     return stored_credentials_path.path
+
+
+def cache_credentials(credentials):
+    """
+    Given a credentials object, cache the given credentials into a file in the
+    Cache directory for later use.
+    """
+    cache_data = {
+        "token": credentials.token,
+        "refresh_token": credentials.refresh_token
+    }
+
+    # Encrypt the cache data using our key and write it out as bytes.
+    aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
+    cache_data = aes.encrypt(json.dumps(cache_data, indent=4))
+
+    with open(stored_credentials_path(), "wb") as handle:
+        handle.write(cache_data)
+
+
+def get_cached_credentials():
+    """
+    Fetch the cached credentials from a previous operation; this will return
+    None if there is currently no cached credentials. This will currently
+    raise an exception if the file is broken (so don't break it).
+    """
+    try:
+        # Decrypt the data with the key and convert it back to JSON.
+        with open(stored_credentials_path(), "rb") as handle:
+            aes = pyaes.AESModeOfOperationCTR(_PBKDF_Key)
+            cache_data = aes.decrypt(handle.read()).decode("utf-8")
+
+            cached = json.loads(cache_data)
+
+    except FileNotFoundError:
+        return None
+
+    return google.oauth2.credentials.Credentials(
+        cached["token"],
+        cached["refresh_token"],
+        CLIENT_CONFIG["installed"]["token_uri"],
+        CLIENT_CONFIG["installed"]["client_id"],
+        SCOPES
+    )
+
+
+# Authorize the request and store authorization credentials.
+def get_authenticated_service():
+    """
+    This builds the appropriate endpoint object to talk to the YouTube data
+    API, using a combination of the client secrets file and either cached
+    credentials or asking the user to log in first.
+
+    If there is no cached credentials, or if they are not valid, then the user
+    is asked to log in again before this returns.
+
+    The result is an object that can be used to make requests to the API.
+    This fetches the authenticated service for use
+    """
+    credentials = get_cached_credentials()
+    if credentials is None or not credentials.valid:
+        # TODO: This can raise exceptions, AccessDeniedError
+        flow = InstalledAppFlow.from_client_config(CLIENT_CONFIG, SCOPES)
+        credentials = flow.run_local_server(client_type="installed",
+            authorization_prompt_message='YouTuberizer: Launching browser to log in',
+            success_message='YouTuberizer login complete! You can close this window.')
+
+        cache_credentials(credentials)
+
+    return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
 
 ###----------------------------------------------------------------------------
@@ -135,6 +254,7 @@ class NetworkThread(Thread):
         super().__init__()
         self.event = event
         self.requests = queue
+        self.youtube = None
 
     # def __del__(self):
     #     log("== Destroying network thread")
@@ -151,7 +271,12 @@ class NetworkThread(Thread):
         result = None
 
         try:
-            result = "The result goes here"
+            if request == "authorize":
+                self.youtube = get_authenticated_service()
+            else:
+                raise ValueError("Unknown request")
+
+            result = "Authenticated"
 
         except Exception as err:
             success = False
