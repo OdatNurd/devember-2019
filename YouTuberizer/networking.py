@@ -192,6 +192,40 @@ def get_authenticated_service():
 ###----------------------------------------------------------------------------
 
 
+class Request(dict):
+    """
+    Simple wrapper for a request object. This is essentially a hashable
+    dictionary object that doesn't throw exceptions when you attempt to access
+    a key that doesn't exist, and which inherently knows what it's name is.
+    """
+    def __init__(self, name, **kwargs):
+        super().__init__(self, **kwargs)
+        self.name = name
+
+    def __key(self):
+        return tuple((k,self[k]) for k in sorted(self))
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return self.__key() == other.__key()
+
+    def __getitem__(self, key):
+        return self.get(key, None)
+
+    def __set_name(self, value):
+        self["_name"] = value
+
+    def __get_name(self):
+        return self.get("_name", None)
+
+    name = property(__get_name, __set_name)
+
+
+###----------------------------------------------------------------------------
+
+
 class NetworkManager():
     """
     This class manages all of our network interactions by using a background
@@ -248,21 +282,18 @@ class NetworkManager():
         This callback is what is submitted to the network thread to invoke
         when a result is delivered. We get the success and the result, as
         well as the request that was made and the user callback.
-        """
 
-        # Cache the result of this latest call; our callback only gets invoked
-        # when we actually dispatch to the network thread, so whatever the
-        # result was, that's the new value here.
-        #
-        # We remove the cached value on failure.
+        NOTE: The NetworkThread always invokes this in Sublime's main thread,
+        not from within itself; this is the barrier where the requested data
+        shifts between threads.
+        """
         if success:
             self.cache[request] = result
         elif request in self.cache:
             del self.cache[request]
 
-        # Some requests we use to update our internal state, so handle that
-        # now as well.
-        if request == "authorize":
+        # Handle updates of internal state.
+        if request.name == "authorize":
             self.authorized = success
 
         user_callback(request, success, result)
@@ -312,7 +343,7 @@ class NetworkThread(Thread):
     # def __del__(self):
     #     log("== Destroying network thread")
 
-    def authenticate(self):
+    def authenticate(self, request):
         """
         Start the authorization flow. If the user has never authorized the app,
         this will launch a browser to ask them to do so and will return a
@@ -321,7 +352,7 @@ class NetworkThread(Thread):
         self.youtube = get_authenticated_service()
         return "Authenticated"
 
-    def uploads_playlist(self):
+    def uploads_playlist(self, request):
         """
         YouTube stores the list of uploaded videos for a user in a specific
         playlist designated for that purposes. This call obtains the playlist
@@ -353,12 +384,12 @@ class NetworkThread(Thread):
         result = None
 
         try:
-            handler = self.request_map.get(request, None)
+            handler = self.request_map.get(request.name, None)
             if handler is None:
-                raise ValueError("Unknown request '%s'" % request)
+                raise ValueError("Unknown request '%s'" % request.name)
 
             success = True
-            result = handler()
+            result = handler(request)
 
         except Exception as err:
             success = False
