@@ -337,7 +337,8 @@ class NetworkThread(Thread):
         # them.
         self.request_map = {
             "authorize": self.authenticate,
-            "uploads_playlist": self.uploads_playlist
+            "uploads_playlist": self.uploads_playlist,
+            "playlist_contents": self.playlist_contents
         }
 
     # def __del__(self):
@@ -371,6 +372,33 @@ class NetworkThread(Thread):
             return channel['contentDetails']['relatedPlaylists']['uploads']
 
         return None
+
+    def playlist_contents(self, request):
+        """
+        Given the ID of a playlsit for a user, fetch the contents of that
+        playlist.
+        """
+        playlistitems_list_request = self.youtube.playlistItems().list(
+            playlistId=request["playlist_id"],
+            part='snippet',
+            # maxResults=20
+        )
+
+        results = []
+        while playlistitems_list_request:
+            playlistitems_list_response = playlistitems_list_request.execute()
+
+            # Print information about each video.
+            for playlist_item in playlistitems_list_response['items']:
+                title = playlist_item['snippet']['title']
+                video_id = playlist_item['snippet']['resourceId']['videoId']
+                results.append([title, 'https://youtu.be/%s' % video_id])
+
+            playlistitems_list_request = self.youtube.playlistItems().list_next(
+                playlistitems_list_request, playlistitems_list_response)
+
+        return list(sorted(results))
+
 
     def handle_request(self, request_obj):
         """
