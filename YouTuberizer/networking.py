@@ -293,8 +293,44 @@ class NetworkThread(Thread):
         self.requests = queue
         self.youtube = None
 
+        # The requests that we know how to service, and what method invokes
+        # them.
+        self.request_map = {
+            "authorize": self.authenticate,
+            "uploads_playlist": self.uploads_playlist
+        }
+
     # def __del__(self):
     #     log("== Destroying network thread")
+
+    def authenticate(self):
+        """
+        Start the authorization flow. If the user has never authorized the app,
+        this will launch a browser to ask them to do so and will return a
+        result as appropriate. Otherwise it will used cached credentials.
+        """
+        self.youtube = get_authenticated_service()
+        return "Authenticated"
+
+    def uploads_playlist(self):
+        """
+        YouTube stores the list of uploaded videos for a user in a specific
+        playlist designated for that purposes. This call obtains the playlist
+        ID of that playlist and returns it.
+
+        This can return None if the user has not uploaded any videos.
+        """
+        channels_response = self.youtube.channels().list(
+            mine=True,
+            part='contentDetails'
+        ).execute()
+
+        # From the API response, extract the playlist ID that identifies the
+        # list of videos uploaded to the authenticated user's channel.
+        for channel in channels_response['items']:
+            return channel['contentDetails']['relatedPlaylists']['uploads']
+
+        return None
 
     def handle_request(self, request_obj):
         """
@@ -308,12 +344,12 @@ class NetworkThread(Thread):
         result = None
 
         try:
-            if request == "authorize":
-                self.youtube = get_authenticated_service()
-            else:
-                raise ValueError("Unknown request")
+            handler = self.request_map.get(request, None)
+            if handler is None:
+                raise ValueError("Unknown request '%s'" % request)
 
-            result = "Authenticated"
+            success = True
+            result = handler()
 
         except Exception as err:
             success = False
