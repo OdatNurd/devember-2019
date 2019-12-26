@@ -123,7 +123,8 @@ def cache_credentials(credentials):
     """
     cache_data = {
         "token": credentials.token,
-        "refresh_token": credentials.refresh_token
+        "refresh_token": credentials.refresh_token,
+        "id_token": credentials.id_token
     }
 
     # Encrypt the cache data using our key and write it out as bytes.
@@ -154,8 +155,10 @@ def get_cached_credentials():
     return google.oauth2.credentials.Credentials(
         cached["token"],
         cached["refresh_token"],
+        cached["id_token"],
         CLIENT_CONFIG["installed"]["token_uri"],
         CLIENT_CONFIG["installed"]["client_id"],
+        CLIENT_CONFIG["installed"]["client_secret"],
         SCOPES
     )
 
