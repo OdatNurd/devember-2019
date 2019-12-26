@@ -249,12 +249,21 @@ class NetworkManager():
         when a result is delivered. We get the success and the result, as
         well as the request that was made and the user callback.
         """
-        if request == "authorize":
-            self.authorized = success
 
-        # Cache results on success
+        # Cache the result of this latest call; our callback only gets invoked
+        # when we actually dispatch to the network thread, so whatever the
+        # result was, that's the new value here.
+        #
+        # We remove the cached value on failure.
         if success:
             self.cache[request] = result
+        elif request in self.cache:
+            del self.cache[request]
+
+        # Some requests we use to update our internal state, so handle that
+        # now as well.
+        if request == "authorize":
+            self.authorized = success
 
         user_callback(success, result)
 
@@ -268,7 +277,7 @@ class NetworkManager():
         Internally this class will cache the result of some requests; in order
         to force a re-request, set refresh to True.
         """
-        if request == "authorize" and self.authorized and not refresh:
+        if request in self.cache and not refresh:
             return callback(True, self.cache[request])
 
         self.request_queue.put({
