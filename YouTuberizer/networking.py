@@ -265,7 +265,7 @@ class NetworkManager():
         if request == "authorize":
             self.authorized = success
 
-        user_callback(success, result)
+        user_callback(request, success, result)
 
     def request(self, request, callback, refresh=False):
         """
@@ -278,7 +278,7 @@ class NetworkManager():
         to force a re-request, set refresh to True.
         """
         if request in self.cache and not refresh:
-            return callback(True, self.cache[request])
+            return callback(request, True, self.cache[request])
 
         self.request_queue.put({
             "request": request, 
