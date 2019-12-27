@@ -24,7 +24,6 @@ def plugin_loaded():
     global netManager
 
     netManager = NetworkManager()
-    netManager.startup()
 
 
 def plugin_unloaded():

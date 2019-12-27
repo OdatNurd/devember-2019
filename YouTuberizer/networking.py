@@ -253,10 +253,12 @@ class NetworkManager():
     def startup(self):
         """
         Start up the networking system; this initializes and starts up the
-        network thread. This should be called from plugin_loaded() get
-        everything ready.
+        network thread. 
+
+        This can be called just prior to the first network operation;
+        optionally it can also be invoked from plugin_loaded().
         """
-        log("Initializing")
+        log("Spinning up YouTube thread")
         self.net_thread.start()
 
     def shutdown(self):
@@ -265,9 +267,10 @@ class NetworkManager():
         that may be running. This should be called from plugin_unloaded() to do
         cleanup before we go away.
         """
-        log("Shutting Down")
-        self.thr_event.set()
-        self.net_thread.join(0.25)
+        if self.net_thread.is_alive():
+            log("Terminating YouTube thrad")
+            self.thr_event.set()
+            self.net_thread.join(0.25)
 
     def has_credentials(self):
         """
@@ -318,6 +321,9 @@ class NetworkManager():
         """
         if request in self.cache and not refresh:
             return callback(request, True, self.cache[request])
+
+        if not self.net_thread.is_alive():
+            self.startup()
 
         self.request_queue.put({
             "request": request, 
@@ -453,7 +459,7 @@ class NetworkThread(Thread):
             except queue.Empty:
                 pass
 
-        log("network thread terminating")
+        log("Network thread has terminated")
 
 
 ###----------------------------------------------------------------------------
