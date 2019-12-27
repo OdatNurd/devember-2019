@@ -134,7 +134,10 @@ class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand, YoutubeRe
     are any, and ask the user to log in if not.
     """
     def run(self):
-        self.request("authorize")
+        if netManager.is_authorized():
+            self.request("uploads_playlist")
+        else:
+            self.request("authorize")
 
     def _authorize(self, request, result):
         self.request("uploads_playlist")
