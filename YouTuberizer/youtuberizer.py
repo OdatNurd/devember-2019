@@ -38,6 +38,39 @@ def plugin_unloaded():
 ###----------------------------------------------------------------------------
 
 
+class YoutubeRequest():
+    """
+    This class abstracts away the common portions of using the NetworkManager
+    to make requests and get responses back.
+
+    A request can be made via the `request()` method, and the result will
+    be automatically directed to a method in the class. The default handler
+    is the name of the request preceeded by an underscore.
+    """
+    def request(self, request, handler=None, **kwargs):
+        netManager.request(Request(request, handler, **kwargs), self.result)
+
+    def result(self, request, success, result):
+        attr = request.handler if success else "_error"
+        if not hasattr(self, attr):
+            raise RuntimeError("'%s' has no handler for request '%s'" % (
+                self.name(), request.name))
+
+        handler = getattr(self, attr)
+        handler(request, result)
+
+    def _error(self, request, result):
+        log("""
+            An error occured while talking to YouTube
+
+            Request: {req}
+            Result:  {err}
+            """, error=True, req=request.name, err=result)
+
+
+###----------------------------------------------------------------------------
+
+
 class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
     """
     If there are any cached credentials for the user's YouTube account,
@@ -69,7 +102,7 @@ class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
 ###----------------------------------------------------------------------------
 
 
-class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
+class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
     """
     Generate a list of videos for a user's YouTube channel into a new view
     in the currently active window. This will use cached credentials if there
@@ -78,18 +111,15 @@ class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
     def run(self):
         self.request("authorize")
 
-    def request(self, request, **kwargs):
-        netManager.request(Request(request, **kwargs), self.result)
+    def _authorize(self, request, result):
+        self.request("uploads_playlist")
 
-    def result(self, request, success, result):
-        if success:
-            if request.name == "authorize":
-                self.request("uploads_playlist")
-            elif request.name == "uploads_playlist":
-                self.request("playlist_contents", playlist_id=result)
-            elif request.name == "playlist_contents":
-                window = sublime.active_window()
-                window.show_quick_panel(result, lambda idx: self.select_video(result[idx]))
+    def _uploads_playlist(self, request, result):
+        self.request("playlist_contents", playlist_id=result)
+
+    def _playlist_contents(self, request, result):
+        window = sublime.active_window()
+        window.show_quick_panel(result, lambda i: self.select_video(result[i]))
 
     def select_video(self, video):
         sublime.set_clipboard(video[1])
