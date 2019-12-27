@@ -1,4 +1,5 @@
 [
-    { "caption": "YouTuberizer: List Videos", "command": "youtuberizer_list_videos" },
+    { "caption": "YouTuberizer: Login",       "command": "youtuberizer_authorize" },
     { "caption": "YouTuberizer: Logout",      "command": "youtuberizer_logout" },
+    { "caption": "YouTuberizer: List Videos", "command": "youtuberizer_list_videos" },
 ]

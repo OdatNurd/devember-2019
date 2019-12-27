@@ -70,7 +70,32 @@ class YoutubeRequest():
 ###----------------------------------------------------------------------------
 
 
-class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
+class YoutuberizerAuthorizeCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
+    """
+    If there are not any cached credentials for the user's YouTube account,
+    trigger a request to authorize the plugin to be able to access the account.
+    """
+    def run(self):
+        self.request("authorize")
+
+    def _authorize(self, request, result):
+        log("""
+            Logged into YouTube
+
+            You are now logged into YouTube! You login credentials
+            are cached and will be re-used as needed; Log out to
+            clear your credentials or to access a different YouTube
+            account.
+            """, dialog=True)
+
+    def is_enabled(self):
+        return not netManager.has_credentials()
+
+
+###----------------------------------------------------------------------------
+
+
+class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
     """
     If there are any cached credentials for the user's YouTube account,
     remove them. This will require that the user authenticate the app again
@@ -84,15 +109,16 @@ class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand):
 
             return
 
-        # TODO: This would actually need to remove the current YouTube object,
-        # but we're not our own thread yet. So this takes effect at the next
-        # reload/restart instead.
-        try:
-            os.remove(stored_credentials_path())
-            sublime.message_dialog("YouTuberizer credentials have been removed")
+        self.request("deauthorize")
 
-        except:
-            pass
+    def _deauthorize(self, request, result):
+        log("""
+            Logged out of YouTube.
+
+            Your stored credentials have been cleared; further
+            access to YouTube will require you to re-authorize
+            YouTuberizer.
+            """, dialog=True)
 
     def is_enabled(self, force=False):
         return netManager.has_credentials()
