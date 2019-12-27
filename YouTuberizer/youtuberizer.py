@@ -66,6 +66,12 @@ class YoutubeRequest():
             Result:  {err}
             """, error=True, req=request.name, err=result)
 
+    # Assume that most commands want to only enable themselves when there are
+    # credentials; commands that are responsible for obtaining credentials
+    # override this method.
+    def is_enabled(self, **kwargs):
+        return netManager.has_credentials()
+
 
 ###----------------------------------------------------------------------------
 
@@ -120,9 +126,6 @@ class YoutuberizerLogoutCommand(YoutubeRequest, sublime_plugin.ApplicationComman
             YouTuberizer.
             """, dialog=True)
 
-    def is_enabled(self, force=False):
-        return netManager.has_credentials()
-
 
 ###----------------------------------------------------------------------------
 
@@ -152,9 +155,6 @@ class YoutuberizerListVideosCommand(YoutubeRequest, sublime_plugin.ApplicationCo
     def select_video(self, video):
         sublime.set_clipboard(video[1])
         sublime.status_message('URL Copied: %s' % video[0])
-
-    def is_enabled(self, force=False):
-        return netManager.has_credentials()
 
 
 ###----------------------------------------------------------------------------
