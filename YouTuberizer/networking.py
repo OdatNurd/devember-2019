@@ -268,7 +268,7 @@ class NetworkManager():
         cleanup before we go away.
         """
         if self.net_thread.is_alive():
-            log("Terminating YouTube thrad")
+            log("Terminating YouTube thread")
             self.thr_event.set()
             self.net_thread.join(0.25)
 
@@ -306,6 +306,9 @@ class NetworkManager():
         # Handle updates of internal state.
         if request.name == "authorize":
             self.authorized = success
+        elif request.name == "deauthorize":
+            self.authorized = False
+            self.cache = dict()
 
         user_callback(request, success, result)
 
@@ -351,6 +354,7 @@ class NetworkThread(Thread):
         # them.
         self.request_map = {
             "authorize": self.authenticate,
+            "deauthorize": self.deauthenticate,
             "uploads_playlist": self.uploads_playlist,
             "playlist_contents": self.playlist_contents
         }
@@ -366,6 +370,20 @@ class NetworkThread(Thread):
         """
         self.youtube = get_authenticated_service()
         return "Authenticated"
+
+    def deauthenticate(self, request):
+        """
+        Completely de-authenticate the current user; this will remove the
+        current login credentials that are cached (if any) and also discard the
+        current service object.
+        """
+        try:
+            os.remove(stored_credentials_path())
+            self.youtube = None
+        except:
+            pass
+
+        return "Deauthenticated"
 
     def uploads_playlist(self, request):
         """
