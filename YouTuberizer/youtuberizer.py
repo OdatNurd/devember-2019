@@ -76,14 +76,17 @@ class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
     are any, and ask the user to log in if not.
     """
     def run(self):
-        netManager.request(Request("authorize"), self.result)
+        self.request("authorize")
+
+    def request(self, request, **kwargs):
+        netManager.request(Request(request, **kwargs), self.result)
 
     def result(self, request, success, result):
         if success:
             if request.name == "authorize":
-                netManager.request(Request("uploads_playlist"), self.result)
+                self.request("uploads_playlist")
             elif request.name == "uploads_playlist":
-                netManager.request(Request("playlist_contents", playlist_id=result), self.result)
+                self.request("playlist_contents", playlist_id=result)
             elif request.name == "playlist_contents":
                 window = sublime.active_window()
                 window.show_quick_panel(result, lambda idx: self.select_video(result[idx]))
@@ -91,6 +94,9 @@ class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand):
     def select_video(self, video):
         sublime.set_clipboard(video[1])
         sublime.status_message('URL Copied: %s' % video[0])
+
+    def is_enabled(self, force=False):
+        return netManager.has_credentials()
 
 
 ###----------------------------------------------------------------------------
