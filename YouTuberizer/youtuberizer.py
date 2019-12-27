@@ -70,7 +70,7 @@ class YoutubeRequest():
 ###----------------------------------------------------------------------------
 
 
-class YoutuberizerAuthorizeCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
+class YoutuberizerAuthorizeCommand(YoutubeRequest, sublime_plugin.ApplicationCommand):
     """
     If there are not any cached credentials for the user's YouTube account,
     trigger a request to authorize the plugin to be able to access the account.
@@ -95,7 +95,7 @@ class YoutuberizerAuthorizeCommand(sublime_plugin.ApplicationCommand, YoutubeReq
 ###----------------------------------------------------------------------------
 
 
-class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
+class YoutuberizerLogoutCommand(YoutubeRequest, sublime_plugin.ApplicationCommand):
     """
     If there are any cached credentials for the user's YouTube account,
     remove them. This will require that the user authenticate the app again
@@ -127,7 +127,7 @@ class YoutuberizerLogoutCommand(sublime_plugin.ApplicationCommand, YoutubeReques
 ###----------------------------------------------------------------------------
 
 
-class YoutuberizerListVideosCommand(sublime_plugin.ApplicationCommand, YoutubeRequest):
+class YoutuberizerListVideosCommand(YoutubeRequest, sublime_plugin.ApplicationCommand):
     """
     Generate a list of videos for a user's YouTube channel into a new view
     in the currently active window. This will use cached credentials if there
