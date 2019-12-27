@@ -46,6 +46,13 @@ class YoutubeRequest():
     be automatically directed to a method in the class. The default handler
     is the name of the request preceeded by an underscore.
     """
+    def authorized(self):
+        if netManager.is_authorized():
+            return True
+
+        self.request("authorize")
+        return False
+
     def request(self, request, handler=None, **kwargs):
         netManager.request(Request(request, handler, **kwargs), self.result)
 
@@ -137,10 +144,8 @@ class YoutuberizerListVideosCommand(YoutubeRequest, sublime_plugin.ApplicationCo
     are any, and ask the user to log in if not.
     """
     def run(self):
-        if netManager.is_authorized():
+        if self.authorized():
             self.request("uploads_playlist")
-        else:
-            self.request("authorize")
 
     def _authorize(self, request, result):
         self.request("uploads_playlist")
